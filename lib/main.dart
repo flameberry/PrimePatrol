@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:smartwater/nav_bar.dart';
 import 'login_pg.dart';
 
 void main() {

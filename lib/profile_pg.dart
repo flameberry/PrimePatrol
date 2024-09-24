@@ -28,7 +28,7 @@ class _ProfilePgState extends State<ProfilePg> {
                 child: CircleAvatar(
                   radius: 60,
                   backgroundImage: AssetImage(
-                      'assets/profile_pic.png'), // Replace with your asset path
+                      'assets/profile_pic.jpeg'), // Replace with your asset path
                   backgroundColor: Colors.grey[200],
                 ),
               ),

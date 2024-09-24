@@ -35,19 +35,11 @@ class _NavBarState extends State<NavBar> {
       extendBody: true,
       bottomNavigationBar: CircleNavBar(
         activeIcons: const [
-          Icon(Icons.home, color: Colors.white), // Home
           Icon(Icons.add_box, color: Colors.white), // Post
-          Icon(Icons.shopping_cart, color: Colors.white), // Shop
+          Icon(Icons.home, color: Colors.white), // Home
+          Icon(Icons.person, color: Colors.white), // Profile
         ],
         inactiveIcons: const [
-          Text(
-            "Home",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
           Text(
             "Post",
             style: TextStyle(
@@ -57,7 +49,15 @@ class _NavBarState extends State<NavBar> {
             ),
           ),
           Text(
-            "Shop",
+            "Home",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            "Profile",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -66,7 +66,7 @@ class _NavBarState extends State<NavBar> {
           ),
         ],
         color: Color(0xFF2E66D7),
-        height: 80,
+        height: 65,
         circleWidth: 60,
         activeIndex: _tabIndex,
         onTap: (index) {
@@ -77,8 +77,8 @@ class _NavBarState extends State<NavBar> {
         },
         padding: const EdgeInsets.only(left: 0, right: 0, bottom: 0),
         cornerRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(18),
+          topRight: Radius.circular(18),
           bottomRight: Radius.circular(1),
           bottomLeft: Radius.circular(1),
         ),
@@ -93,9 +93,9 @@ class _NavBarState extends State<NavBar> {
           });
         },
         children: const [
-          HomePg(), // Home Page
           PostPg(), // Post Page
-          ProfilePg(), // Shop Page
+          HomePg(), // Home Page
+          ProfilePg(), // Profile Page
         ],
       ),
     );
