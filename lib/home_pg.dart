@@ -23,8 +23,8 @@ class _HomePgState extends State<HomePg> {
   // Image list for swipable stack
   final List<String> imagePaths = [
     'assets/inds.png',
-    'assets/poster.png',
-    'assets/coffee_mug.png',
+    'assets/garbage.png',
+    'assets/water_prob.png',
   ];
 
   @override
@@ -130,44 +130,44 @@ class _HomePgState extends State<HomePg> {
             ),
           ),
 
-          // Stack displaying images with reduced height and rounded corners
+          // Stack displaying images with rounded corners
           SizedBox(
             height: 420.0, // Height for the swipeable stack
-            child: ClipRRect(
-              borderRadius:
-                  BorderRadius.circular(15.0), // Adjust the radius as needed
-              child: Center(
-                child: GestureDetector(
-                  onHorizontalDragEnd: (details) {
-                    setState(() {
-                      if (details.primaryVelocity! < 0) {
-                        // Swipe left
-                        currentIndex = (currentIndex + 1) % imagePaths.length;
-                      } else if (details.primaryVelocity! > 0) {
-                        // Swipe right
-                        currentIndex = (currentIndex - 1 + imagePaths.length) %
-                            imagePaths.length;
-                      }
-                    });
-                  },
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: imagePaths.asMap().entries.map((entry) {
-                      int idx = entry.key;
-                      String imagePath = entry.value;
+            child: Center(
+              child: GestureDetector(
+                onHorizontalDragEnd: (details) {
+                  setState(() {
+                    if (details.primaryVelocity! < 0) {
+                      // Swipe left
+                      currentIndex = (currentIndex + 1) % imagePaths.length;
+                    } else if (details.primaryVelocity! > 0) {
+                      // Swipe right
+                      currentIndex = (currentIndex - 1 + imagePaths.length) %
+                          imagePaths.length;
+                    }
+                  });
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: imagePaths.asMap().entries.map((entry) {
+                    int idx = entry.key;
+                    String imagePath = entry.value;
 
-                      return AnimatedOpacity(
-                        duration: const Duration(milliseconds: 300),
-                        opacity: idx == currentIndex ? 1.0 : 0.0,
+                    return AnimatedOpacity(
+                      duration: const Duration(milliseconds: 300),
+                      opacity: idx == currentIndex ? 1.0 : 0.0,
+                      child: ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(15.0), // Rounded corners
                         child: Image.asset(
                           imagePath,
                           width: 300.0,
                           height: 300.0,
                           fit: BoxFit.cover,
                         ),
-                      );
-                    }).toList(),
-                  ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
@@ -194,7 +194,7 @@ class _HomePgState extends State<HomePg> {
                   SizedBox(width: 10.0), // Space between icon and text
                   Expanded(
                     child: Text(
-                      'Please be cautious with your purchases.', // Sample text
+                      '20 cases reported in 24 hrs', // Sample text
                       style: TextStyle(fontSize: 16.0, color: Colors.black),
                     ),
                   ),

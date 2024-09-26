@@ -16,7 +16,7 @@ class _ProfilePgState extends State<ProfilePg> {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.white,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50], // Light grey background
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -36,7 +36,7 @@ class _ProfilePgState extends State<ProfilePg> {
 
               // User Name
               const Text(
-                'John Doe',
+                'Soham Kelaskar',
                 style: TextStyle(
                   fontSize: 24.0,
                   fontWeight: FontWeight.bold,
@@ -47,7 +47,7 @@ class _ProfilePgState extends State<ProfilePg> {
 
               // User Email or Info
               const Text(
-                'john.doe@example.com',
+                'sohamkelaskar10@gmail.com',
                 style: TextStyle(
                   fontSize: 16.0,
                   color: Colors.grey,
@@ -60,7 +60,7 @@ class _ProfilePgState extends State<ProfilePg> {
               Container(
                 padding: const EdgeInsets.all(16.0),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: Colors.white,
                   borderRadius: BorderRadius.circular(12.0),
                   boxShadow: [
                     BoxShadow(
@@ -74,10 +74,9 @@ class _ProfilePgState extends State<ProfilePg> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Add any additional profile information here
-                    _buildProfileDetail('Phone', '+1 234 567 890'),
+                    _buildProfileDetail('Phone', '+91 9930183270'),
                     const Divider(),
-                    _buildProfileDetail(
-                        'Address', '123 Main Street, City, Country'),
+                    _buildProfileDetail('Address', 'Thane, Maharashtra'),
                   ],
                 ),
               ),
@@ -89,8 +88,13 @@ class _ProfilePgState extends State<ProfilePg> {
                 onPressed: () {
                   // Add functionality for editing profile
                 },
-                icon: const Icon(Icons.edit),
-                label: const Text('Edit Profile'),
+                icon: const Icon(Icons.edit,
+                    color: Colors.white), // Icon color set to white
+                label: const Text(
+                  'Edit Profile',
+                  style:
+                      TextStyle(color: Colors.white), // Text color set to white
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue[900], // Dark blue color
                   padding: const EdgeInsets.symmetric(
@@ -108,8 +112,13 @@ class _ProfilePgState extends State<ProfilePg> {
                 onPressed: () {
                   // Add functionality for logout
                 },
-                icon: const Icon(Icons.logout),
-                label: const Text('Logout'),
+                icon: const Icon(Icons.logout,
+                    color: Colors.white), // Icon color set to white
+                label: const Text(
+                  'Logout',
+                  style:
+                      TextStyle(color: Colors.white), // Text color set to white
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red, // Red color for logout
                   padding: const EdgeInsets.symmetric(

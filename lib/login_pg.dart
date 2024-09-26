@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartwater/home_pg.dart';
 import 'package:smartwater/nav_bar.dart';
+import 'package:smartwater/post_pg.dart';
 
 class LoginPg extends StatefulWidget {
   @override
