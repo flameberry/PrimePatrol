@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 9
+names: ['closed manhole-not overflowing-', 'drainage overflow-repair-', 'fake manhole', 'open drainage-not overflowing-', 'open drainage-overflowing-', 'open manhole-not overflowing-', 'algae','pipe_leak', 'pothole']
+
+roboflow:
+  workspace: chaitanya-kharche
+  project: drain-overflow
+  version: 2
+  license: MIT
+  url: https://universe.roboflow.com/chaitanya-kharche/drain-overflow/dataset/2
