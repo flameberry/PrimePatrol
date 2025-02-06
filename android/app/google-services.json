@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "115880284665",
+    "project_id": "smartwater-949ac",
+    "storage_bucket": "smartwater-949ac.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:115880284665:android:7741aaaf055df84d2eed28",
+        "android_client_info": {
+          "package_name": "com.example.smartwater"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "115880284665-frhmo0ekq40jv26971d54thesrochnii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1OYpZeynJnxW40bsm53WF90_jE5toVTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "115880284665-frhmo0ekq40jv26971d54thesrochnii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:115880284665:android:af82c5b49ea672902eed28",
+        "android_client_info": {
+          "package_name": "com.smart"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "115880284665-frhmo0ekq40jv26971d54thesrochnii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1OYpZeynJnxW40bsm53WF90_jE5toVTQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "115880284665-frhmo0ekq40jv26971d54thesrochnii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

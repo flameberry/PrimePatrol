@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:smartwater/home_pg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smartwater/nav_bar.dart';
-import 'package:smartwater/post_pg.dart';
 
 class LoginPg extends StatefulWidget {
   @override
@@ -12,6 +11,51 @@ class _LoginPgState extends State<LoginPg> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _login() async {
+    try {
+      // Try to sign in with email and password
+      await _auth.signInWithEmailAndPassword(
+          email: _emailController.text, password: _passwordController.text);
+
+      // Navigate to home page after successful login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NavBar()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'user-not-found') {
+        // Show alert if the email is not found
+        _showErrorDialog('Account does not exist. Please register.');
+      } else if (e.code == 'wrong-password') {
+        // Show alert for incorrect password
+        _showErrorDialog('Incorrect password. Please try again.');
+      } else {
+        _showErrorDialog(e.message ?? 'Login failed. Please try again.');
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Login Error'),
+          content: Text(message),
+          actions: <Widget>[
+            TextButton(
+              child: Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,9 +69,7 @@ class _LoginPgState extends State<LoginPg> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                SizedBox(
-                  height: 30,
-                ),
+                SizedBox(height: 30),
                 // App logo
                 Container(
                   margin: EdgeInsets.only(bottom: 24.0),
@@ -113,13 +155,11 @@ class _LoginPgState extends State<LoginPg> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (context) => NavBar()));
+                        _login();
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(
-                          0xFF2E66D7), // Dark blue color for button                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      backgroundColor: Color(0xFF2E66D7),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                       ),
@@ -127,7 +167,7 @@ class _LoginPgState extends State<LoginPg> {
                     child: Text(
                       'Login',
                       style: TextStyle(
-                        color: Colors.white, // White text color
+                        color: Colors.white,
                         fontSize: 18.0,
                       ),
                     ),

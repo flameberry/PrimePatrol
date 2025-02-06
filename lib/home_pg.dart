@@ -27,6 +27,13 @@ class _HomePgState extends State<HomePg> {
     'assets/water_prob.png',
   ];
 
+  // Subtitles for each image
+  final List<String> imageSubtitles = [
+    'Industrial Waste Issues',
+    'Garbage Disposal Problems',
+    'Water Logging Concerns',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,7 +121,6 @@ class _HomePgState extends State<HomePg> {
                     return DropdownMenuItem<String>(
                       value: category,
                       child: Center(
-                        // Center the text within each dropdown item
                         child: Text(
                           category,
                           style: const TextStyle(
@@ -129,10 +135,13 @@ class _HomePgState extends State<HomePg> {
               ),
             ),
           ),
-
-          // Stack displaying images with rounded corners
           SizedBox(
-            height: 420.0, // Height for the swipeable stack
+            height: 30,
+          ),
+
+          // Stack displaying images with rounded corners and subtitle
+          SizedBox(
+            height: 380.0, // Height for the swipeable stack
             child: Center(
               child: GestureDetector(
                 onHorizontalDragEnd: (details) {
@@ -147,27 +156,40 @@ class _HomePgState extends State<HomePg> {
                     }
                   });
                 },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: imagePaths.asMap().entries.map((entry) {
-                    int idx = entry.key;
-                    String imagePath = entry.value;
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: imagePaths.asMap().entries.map((entry) {
+                        int idx = entry.key;
+                        String imagePath = entry.value;
 
-                    return AnimatedOpacity(
-                      duration: const Duration(milliseconds: 300),
-                      opacity: idx == currentIndex ? 1.0 : 0.0,
-                      child: ClipRRect(
-                        borderRadius:
-                            BorderRadius.circular(15.0), // Rounded corners
-                        child: Image.asset(
-                          imagePath,
-                          width: 300.0,
-                          height: 300.0,
-                          fit: BoxFit.cover,
-                        ),
+                        return AnimatedOpacity(
+                          duration: const Duration(milliseconds: 300),
+                          opacity: idx == currentIndex ? 1.0 : 0.0,
+                          child: ClipRRect(
+                            borderRadius:
+                                BorderRadius.circular(15.0), // Rounded corners
+                            child: Image.asset(
+                              imagePath,
+                              width: 300.0,
+                              height: 300.0,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10.0),
+                    Text(
+                      imageSubtitles[currentIndex], // Display subtitle
+                      style: const TextStyle(
+                        fontSize: 16.0,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
                 ),
               ),
             ),

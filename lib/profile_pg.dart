@@ -47,7 +47,7 @@ class _ProfilePgState extends State<ProfilePg> {
 
               // User Email or Info
               const Text(
-                'sohamkelaskar10@gmail.com',
+                'soham03@gmail.com',
                 style: TextStyle(
                   fontSize: 16.0,
                   color: Colors.grey,
@@ -74,7 +74,7 @@ class _ProfilePgState extends State<ProfilePg> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Add any additional profile information here
-                    _buildProfileDetail('Phone', '+91 9930183270'),
+                    _buildProfileDetail('Phone', '+91 91568 54149'),
                     const Divider(),
                     _buildProfileDetail('Address', 'Thane, Maharashtra'),
                   ],
