@@ -1,0 +1,63 @@
+version: "3.8"
+services:
+  # Development service
+  app-dev:
+    container_name: smartwater-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    env_file:
+      - .env.development
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - db
+    profiles:
+      - dev
+
+  # Prodution service
+  app-prod:
+    container_name: smartwater-prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    env_file:
+      - .env.production
+    ports:
+      - '8080:3000'
+    depends_on:
+      - db
+    profiles:
+      - prod
+
+  # Database service (PostgreSQL)
+  db:
+    image: postgres:17-alpine
+    container_name: smartwater-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: untrained0
+      POSTGRES_DB: smartwater
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432' 
+
+    # pgAdmin service (PostgreSQL)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: smartwater-pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=sohamkelaskar@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=untrained0
+    ports:
+      - '5050:80'
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+   name: smartwater-data
