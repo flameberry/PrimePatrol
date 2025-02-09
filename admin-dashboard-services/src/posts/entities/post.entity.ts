@@ -1,16 +1,29 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { WorkerActivity } from 'src/worker/entities/worker-activity.entity';
+import { Worker } from 'src/worker/entities/worker.entity';
+import { Column, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'posts' })
 export class Post {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
-  name: string;
+  @Column()
+  title: string;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
+  @Column()
+  content: string;
 
-  @Column({ type: 'boolean', default: true })
-  active: boolean;
+  @Column({ default: 'pending' })
+  status: string;
+
+  @ManyToMany(() => Worker)
+  @JoinTable({
+    name: 'post_workers',
+    joinColumn: { name: 'post_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'worker_id', referencedColumnName: 'id' }
+  })
+  assignedWorkers: Worker[];
+
+  @OneToMany(() => WorkerActivity, activity => activity.post)
+  workerActivities: WorkerActivity[];
 }

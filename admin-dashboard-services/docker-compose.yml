@@ -17,8 +17,10 @@ services:
       - db
     profiles:
       - dev
+    networks:
+      - smartwater-network
 
-  # Prodution service
+  # Production service
   app-prod:
     container_name: smartwater-prod
     build:
@@ -32,6 +34,8 @@ services:
       - db
     profiles:
       - prod
+    networks:
+      - smartwater-network
 
   # Database service (PostgreSQL)
   db:
@@ -44,9 +48,11 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - '5433:5432' 
+      - '5433:5432'
+    networks:
+      - smartwater-network
 
-    # pgAdmin service (PostgreSQL)
+  # pgAdmin service (PostgreSQL)
   pgadmin:
     image: dpage/pgadmin4
     container_name: smartwater-pgadmin4
@@ -57,7 +63,13 @@ services:
       - '5050:80'
     depends_on:
       - db
+    networks:
+      - smartwater-network
 
 volumes:
   db_data:
-   name: smartwater-data
+    name: smartwater-data
+
+networks:
+  smartwater-network:
+    name: smartwater-network

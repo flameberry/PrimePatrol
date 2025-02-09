@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { PostsModule } from './posts/posts.module';
+import { WorkerModule } from './worker/worker.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PostsModule } from './posts/posts.module';
       }),
     }),
     PostsModule,
+    WorkerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
