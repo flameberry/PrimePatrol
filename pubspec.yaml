@@ -41,6 +41,7 @@ dependencies:
   cached_network_image:
   cloud_firestore:
   http: ^0.13.3
+  dart_amqp: ^0.2.2
 
 dev_dependencies:
   flutter_test:

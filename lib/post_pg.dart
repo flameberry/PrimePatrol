@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:dart_amqp/dart_amqp.dart';
+import 'dart:convert';
 
 class PostPg extends StatefulWidget {
   const PostPg({Key? key}) : super(key: key);
@@ -37,6 +39,62 @@ class _PostPgState extends State<PostPg> {
     }
   }
 
+  // Future<void> _sendImageToQueue(File imageFile) async {
+  //   try {
+  //     final ConnectionSettings settings = ConnectionSettings(
+  //       host: '10.0.2.2', // Change if RabbitMQ is on another machine
+  //       port: 5672, // Default RabbitMQ port
+  //       authProvider: PlainAuthenticator('myuser', 'mypassword'),
+  //     );
+  //
+  //     Client client = Client(settings: settings);
+  //     Channel channel = await client.channel();
+  //     Queue queue = await channel.queue('image_queue', durable: true);
+  //
+  //     // Convert image to base64
+  //     List<int> imageBytes = await imageFile.readAsBytes();
+  //     String base64Image = base64Encode(imageBytes);
+  //
+  //     // Send message
+  //     queue.publish(base64Image);
+  //     print('Image sent to queue successfully');
+  //
+  //     client.close();
+  //   } catch (e) {
+  //     print('Error sending image to RabbitMQ: $e');
+  //   }
+  // }
+
+  Future<void> _sendImageToQueue(File imageFile) async {
+    try {
+      final ConnectionSettings settings = ConnectionSettings(
+        host: '10.0.2.2', // Emulator-to-host mapping for RabbitMQ
+        port: 5672,
+        authProvider: PlainAuthenticator('myuser', 'mypassword'),
+      );
+
+      Client client = Client(settings: settings);
+      Channel channel = await client.channel();
+      Queue queue = await channel.queue('image_queue', durable: true);
+
+      // Convert image to Base64
+      List<int> imageBytes = await imageFile.readAsBytes();
+      String base64Image = base64Encode(imageBytes);
+
+      // Create JSON payload
+      String jsonMessage = jsonEncode({"image": base64Image});
+
+      // Send message
+      queue.publish(jsonMessage);
+      print('✅ Image sent to queue successfully');
+
+      client.close();
+    } catch (e) {
+      print('❌ Error sending image to RabbitMQ: $e');
+    }
+  }
+
+
   // Function to handle map interaction (dummy for now)
   Future<void> _pickLocation() async {
     // Simulate a location being picked for demonstration
@@ -47,16 +105,21 @@ class _PostPgState extends State<PostPg> {
 
   // Function to handle post submission
   void _submitPost() {
+    if (_selectedImage != null) {
+      _sendImageToQueue(_selectedImage!);
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Post submitted successfully!')),
     );
+
     setState(() {
       _selectedImage = null;
       _titleController.clear();
       _descriptionController.clear();
       _selectedLocation = null;
       selectedCategory = 'Select Category';
-      _currentStep = 1; // Reset the step to 1 after submission
+      _currentStep = 1;
     });
   }
 
