@@ -1,13 +1,19 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Worker, WorkerSchema } from './schemas/worker.schema';
+import { WorkerActivity, WorkerActivitySchema } from './schemas/worker.activity.schema';
 import { WorkerService } from './worker.service';
 import { WorkerController } from './worker.controller';
-import { Worker } from './entities/worker.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Worker])], // Register Worker entity
-  controllers: [WorkerController],
+  imports: [
+    MongooseModule.forFeature([
+      { name: Worker.name, schema: WorkerSchema },
+      { name: WorkerActivity.name, schema: WorkerActivitySchema }
+    ]),
+  ],
   providers: [WorkerService],
+  controllers: [WorkerController],
   exports: [WorkerService],
 })
 export class WorkerModule {}

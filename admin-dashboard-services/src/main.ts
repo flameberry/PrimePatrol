@@ -1,43 +1,62 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { VersioningType } from '@nestjs/common';
+import helmet from 'helmet';
+// import * as rateLimit from 'express-rate-limit';
+import { VersioningType, Logger } from '@nestjs/common';
+import { join } from 'path';
+import * as express from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Security
-  // app.useGlobalGuards(new ApiKeyAuthGuard());
-  app.enableCors();
-  // app.use(helmet());
+  // ✅ Security Enhancements
+  app.enableCors({
+    origin: '*', // Adjust this based on your frontend domain
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+  });
+  app.use(helmet()); // Enables HTTP security headers
+  // app.use(
+  //   rateLimit({
+  //     windowMs: 15 * 60 * 1000, // 15 minutes
+  //     max: 100, // Limit each IP to 100 requests per window
+  //     message: 'Too many requests, please try again later.',
+  //   })
+  // );
 
+  // ✅ Enable Static File Serving for Image Uploads
+  const uploadPath = join(__dirname, '..', 'uploads');
+  app.use('/uploads', express.static(uploadPath));
+  Logger.log(`🖼 Static files served from /uploads`);
+
+  // ✅ API Versioning
   app.enableVersioning({
-    type: VersioningType.URI,
+    type: VersioningType.URI, // Example: /v1/posts
   });
 
-  const options = new DocumentBuilder()
+  // ✅ Swagger Configuration
+  const swaggerConfig = new DocumentBuilder()
     .setTitle('SmartWater API')
-    .setDescription(
-      `The SmartWater API provides endpoints to manage and interact with the SmartWater mobile application. 
-       This platform enables real-time water issue reporting, efficient water management, and enhanced community participation.
-       
-       Key Features:
-       1. User Authentication: Secure user registration and login functionality using JWT (JSON Web Token) to ensure authenticated interactions with the API.
-       2. Community Reporting: Users can report water-related issues (e.g., floods, pollution, droughts) via a simple interface, contributing to data collection efforts.
-       3. Shakti Points & Referral Rewards: Users earn Shakti Points for submitting reports and referral bonuses for encouraging new users to join and contribute.
-       4. Real-time Alerts: Users within a 2km radius of a reported issue are sent real-time alerts to encourage timely community response.
-       5. Crowdsourced Data Collection via Twitter Bot: The API scrapes Twitter for water-related posts, helping to gather broader data for more accurate decision-making.
-       6. Image Classification: The API utilizes a Convolutional Neural Network (CNN) to classify images of water issues, improving the accuracy of reports and their categorization.
-       7. Intent Matching Algorithm: An advanced algorithm that consolidates similar water-related reports, enhancing user experience and reducing redundancy.
-       8. Blockchain-based Donation System: A transparent donation system powered by blockchain technology, integrated with UPI and Net Banking, ensuring secure transactions for water-related causes.
-       9. Admin Dashboard: A dedicated interface for administrators to manage tasks, view analytics, and track the progress of reported issues through a Kanban board.
-       10. Government Notifications: Critical water management issues are forwarded to relevant government ministries through an admin dashboard, ensuring swift governmental action.
-       11. Multilingual Support: The app supports multiple languages, making it accessible to a diverse user base.
-       12. Accessibility Features: Includes voice navigation, text-to-speech, and a user-friendly layout for an inclusive experience for all users.`
-    )
+    .setDescription(`
+      The SmartWater API provides endpoints to manage and interact with the SmartWater mobile application. 
+      
+      ### **Key Features**
+      1. **User Authentication**: Secure JWT-based authentication.
+      2. **Community Reporting**: Report water-related issues (floods, pollution, droughts).
+      3. **Shakti Points & Referral Rewards**: Earn points for contributing reports.
+      4. **Real-time Alerts**: Notify users within a 2km radius of reported issues.
+      5. **Crowdsourced Data Collection via Twitter Bot**.
+      6. **Image Classification with CNN**.
+      7. **Intent Matching Algorithm**: Group similar reports to reduce redundancy.
+      8. **Blockchain-based Donation System**.
+      9. **Admin Dashboard for Analytics & Report Tracking**.
+      10. **Government Notifications for Critical Issues**.
+      11. **Multilingual Support & Accessibility Features**.
+    `)
     .setVersion('1.0')
     .addTag('posts')
-    .addBearerAuth() // For authentication
+    .addBearerAuth() // Adds Authorization Bearer Token for protected routes
     .addSecurity('JWT', {
       type: 'http',
       scheme: 'bearer',
@@ -45,9 +64,22 @@ async function bootstrap() {
     })
     .build();
 
-  const document = SwaggerModule.createDocument(app, options);
-  SwaggerModule.setup('api', app, document);
+  const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api', app, swaggerDocument);
 
-  await app.listen(3000);
+  // ✅ Graceful Shutdown Handling
+  process.on('SIGINT', async () => {
+    Logger.log('Shutting down gracefully...');
+    await app.close();
+    process.exit(0);
+  });
+
+  const PORT = process.env.PORT || 3000;
+  await app.listen(PORT, () => {
+    Logger.log(`🚀 Server is running on http://localhost:${PORT}`);
+    Logger.log(`📄 Swagger Docs available at http://localhost:${PORT}/api`);
+    Logger.log(`🖼 Uploaded files accessible at http://localhost:${PORT}/uploads`);
+  });
 }
+
 bootstrap();

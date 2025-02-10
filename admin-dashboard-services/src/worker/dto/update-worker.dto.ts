@@ -1,11 +1,15 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateWorkerDto } from './create-worker.dto';
+import { PartialType } from '@nestjs/swagger';
+import { IsString, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { CreateWorkerDto } from './create-worker.dto';
 
 export class UpdateWorkerDto extends PartialType(CreateWorkerDto) {
-  @ApiProperty({ example: 1, description: 'Worker ID' })
-  id: number;
-
-  @ApiProperty({ example: 'active', description: 'Status of the worker' })
-  status?: string;
+  @ApiProperty({
+    description: 'The current status of the worker',
+    enum: ['ACTIVE', 'INACTIVE', 'ON_LEAVE'],
+    example: 'ACTIVE'
+  })
+  @IsString()
+  @IsEnum(['ACTIVE', 'INACTIVE', 'ON_LEAVE'])
+  status: string;
 }

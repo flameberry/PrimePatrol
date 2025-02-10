@@ -1,88 +1,60 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { CreateWorkerDto } from './dto/create-worker.dto';
-import { Worker } from './entities/worker.entity';
+import { UpdateWorkerDto } from './dto/update-worker.dto';
+import { Worker, WorkerDocument } from './schemas/worker.schema';
 
 @Injectable()
 export class WorkerService {
   constructor(
-    @InjectRepository(Worker)
-    private readonly workerRepository: Repository<Worker>
+    @InjectModel(Worker.name) private workerModel: Model<WorkerDocument>
   ) {}
 
-  async create(createWorkerDto: CreateWorkerDto) {
-    try {
-      const worker = this.workerRepository.create(createWorkerDto);
-      return await this.workerRepository.save(worker);
-    } catch (error) {
-      console.error('Error creating worker:', error);
-      throw new InternalServerErrorException('Failed to create worker');
-    }
+  async create(createWorkerDto: CreateWorkerDto): Promise<Worker> {
+    const createdWorker = new this.workerModel(createWorkerDto);
+    return createdWorker.save();
   }
 
-  async findAll() {
-    try {
-      // Using the repository's find method with relations instead of queryBuilder
-      return await this.workerRepository.find({
-        relations: {
-          assignedPosts: true
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching all workers:', error);
-      throw new InternalServerErrorException('Failed to fetch workers');
-    }
+  async findAll(): Promise<Worker[]> {
+    return this.workerModel.find()
+      .populate('activities')
+      .populate('assignedPosts')
+      .exec();
   }
 
-  async findOne(id: number) {
-    try {
-      const worker = await this.workerRepository.findOne({
-        where: { id },
-        relations: {
-          assignedPosts: true
-        }
-      });
-      
-      if (!worker) {
-        throw new NotFoundException(`Worker with ID ${id} not found`);
-      }
-      return worker;
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      console.error('Error fetching worker:', error);
-      throw new InternalServerErrorException('Failed to fetch worker');
+  async findOne(id: string): Promise<Worker> {
+    const worker = await this.workerModel.findById(id)
+      .populate('activities')
+      .populate('assignedPosts')
+      .exec();
+    
+    if (!worker) {
+      throw new NotFoundException(`Worker with ID ${id} not found`);
     }
+    return worker;
   }
 
-  async updateStatus(id: number, status: string) {
-    try {
-      const worker = await this.findOne(id);
-      worker.status = status;
-      return await this.workerRepository.save(worker);
-    } catch (error) {
-      console.error('Error updating worker status:', error);
-      throw new InternalServerErrorException('Failed to update worker status');
+  async updateStatus(id: string, status: string): Promise<Worker> {
+    const updatedWorker = await this.workerModel.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    ).exec();
+
+    if (!updatedWorker) {
+      throw new NotFoundException(`Worker with ID ${id} not found`);
     }
+    return updatedWorker;
   }
 
-  async remove(id: number) {
-    try {
-      const result = await this.workerRepository.delete(id);
-      
-      if (result.affected === 0) {
-        throw new NotFoundException(`Worker with ID ${id} not found`);
-      }
-      
-      return { message: 'Worker removed successfully' };
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      console.error('Error removing worker:', error);
-      throw new InternalServerErrorException('Failed to remove worker');
+  async remove(id: string): Promise<{ message: string }> {
+    const result = await this.workerModel.findByIdAndDelete(id).exec();
+    
+    if (!result) {
+      throw new NotFoundException(`Worker with ID ${id} not found`);
     }
+    
+    return { message: 'Worker deleted successfully' };
   }
 }

@@ -26,4 +26,7 @@ export class Post {
 
   @OneToMany(() => WorkerActivity, activity => activity.post)
   workerActivities: WorkerActivity[];
+
+  @Column({ type: 'bytea', nullable: true })  // Ensure image is stored as binary data (Buffer)
+  image: Buffer;
 }

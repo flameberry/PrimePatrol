@@ -1,111 +1,162 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, RequestTimeoutException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Post, PostDocument } from './schemas/post.schema';
+import { Worker, WorkerDocument } from '../worker/schemas/worker.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Post } from './entities/post.entity';
-import { WorkerActivity } from 'src/worker/entities/worker-activity.entity';
-import { AssignWorkersDto } from 'src/worker/dto/assign-workers.dto';
-import { CreateWorkerActivityDto } from 'src/worker/dto/worker-activity.dto';
-import { Worker } from 'src/worker/entities/worker.entity';
+import { AssignWorkersDto } from '../worker/dto/assign-workers.dto';
+import { CreateWorkerActivityDto } from '../worker/dto/worker-activity.dto';
+import { WorkerActivity, WorkerActivityDocument } from 'src/worker/schemas/worker.activity.schema';
 
 @Injectable()
 export class PostsService {
   constructor(
-    @InjectRepository(Post)
-    private readonly postsRepository: Repository<Post>,
-    @InjectRepository(Worker)
-    private readonly workerRepository: Repository<Worker>,
-    @InjectRepository(WorkerActivity)
-    private readonly workerActivityRepository: Repository<WorkerActivity>
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(Worker.name) private workerModel: Model<WorkerDocument>,
+    @InjectModel(WorkerActivity.name) private workerActivityModel: Model<WorkerActivityDocument>
   ) {}
 
-  async create(createPostDto: CreatePostDto) {
-    const post = this.postsRepository.create(createPostDto);
-    return await this.postsRepository.save(post);
+  async create(createPostDto: CreatePostDto, imageUrl: string) {
+    const TIMEOUT_LIMIT = 30000;
+    
+    const post = new this.postModel({
+      ...createPostDto,
+    imageUrl, // Save imageUrl here
+    });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new RequestTimeoutException()), TIMEOUT_LIMIT)
+    );
+
+    try {
+      return await Promise.race([post.save(), timeoutPromise]);
+    } catch (error) {
+      throw error;
+    }
   }
 
   async findAll() {
-    return await this.postsRepository.find({
-      relations: ['assignedWorkers', 'workerActivities']
+    const posts = await this.postModel
+      .find()
+      .populate('assignedWorkers')
+      .populate('workerActivities')
+      .exec();
+
+    return posts.map(post => {
+      if (post.imageUrl) {
+        return {
+          ...post.toObject(),
+          imageUrl: `data:image/png;base64,${post.imageUrl}`,
+        };
+      }
+      return post;
     });
   }
 
-  async findOne(id: number) {
-    return await this.postsRepository.findOne({
-      where: { id },
-      relations: ['assignedWorkers', 'workerActivities']
-    });
-  }
+  async findOne(id: string) {
+    const post = await this.postModel
+      .findById(id)
+      .populate('assignedWorkers')
+      .populate('workerActivities')
+      .exec();
+    
+    if (!post) throw new NotFoundException();
 
-  async assignWorkers(postId: number, assignWorkersDto: AssignWorkersDto) {
-    const post = await this.findOne(postId);
-    if (!post) {
-      throw new NotFoundException('Post not found');
+    if (post.imageUrl) {
+      return {
+        ...post.toObject(),
+        imageUrl: `data:image/png;base64,${post.imageUrl}`,
+      };
     }
 
-    // Find the workers and handle the case where some workers don't exist
-    const workers = await this.workerRepository.findByIds(assignWorkersDto.workerIds);
-    if (workers.length !== assignWorkersDto.workerIds.length) {
+    return post;
+  }
+
+  async assignWorkers(postId: string, { workerIds }: AssignWorkersDto) {
+    const workers = await this.workerModel.find({ _id: { $in: workerIds } });
+    if (workers.length !== workerIds.length) {
       throw new NotFoundException('Some workers not found');
     }
 
-    post.assignedWorkers = workers;
-    return await this.postsRepository.save(post);
+    const post = await this.postModel.findByIdAndUpdate(
+      postId,
+      { $set: { assignedWorkers: workerIds } },
+      { new: true }
+    ).populate('assignedWorkers');
+
+    if (!post) throw new NotFoundException('Post not found');
+    return post;
   }
 
-  async logWorkerActivity(postId: number, activityDto: CreateWorkerActivityDto) {
-    const post = await this.findOne(postId);
-    if (!post) {
-      throw new NotFoundException('Post not found');
+  async logWorkerActivity(postId: string, activityDto: CreateWorkerActivityDto) {
+    const [post, worker] = await Promise.all([
+      this.postModel.findById(postId),
+      this.workerModel.findById(activityDto.workerId)
+    ]);
+
+    if (!post || !worker) {
+      throw new NotFoundException('Post or worker not found');
     }
 
-    const worker = await this.workerRepository.findOne({
-      where: { id: activityDto.workerId }
-    });
-    if (!worker) {
-      throw new NotFoundException('Worker not found');
-    }
-
-    const activity = this.workerActivityRepository.create({
-      post, // Explicitly referencing the post
-      worker, // Explicitly referencing the worker
+    const activity = new this.workerActivityModel({
+      post: postId,
+      worker: activityDto.workerId,
       action: activityDto.action,
       description: activityDto.description
     });
 
-    return await this.workerActivityRepository.save(activity);
+    const savedActivity = await activity.save();
+    
+    await Promise.all([
+      this.postModel.findByIdAndUpdate(postId, {
+        $push: { workerActivities: savedActivity._id }
+      }),
+      this.workerModel.findByIdAndUpdate(activityDto.workerId, {
+        $push: { activities: savedActivity._id }
+      })
+    ]);
+
+    return savedActivity;
   }
 
-  async getWorkerActivities(postId: number) {
-    const post = await this.findOne(postId);
-    if (!post) {
-      throw new NotFoundException('Post not found');
+  async getWorkerActivities(postId: string) {
+    const activities = await this.workerActivityModel
+      .find({ post: postId })
+      .populate('worker')
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!activities.length) {
+      const post = await this.postModel.findById(postId);
+      if (!post) throw new NotFoundException('Post not found');
     }
 
-    return await this.workerActivityRepository.find({
-      where: { post: { id: postId } },
-      relations: ['worker'],
-      order: { timestamp: 'DESC' }
-    });
+    return activities;
   }
 
-  async update(id: number, updatePostDto: UpdatePostDto) {
-    const post = await this.findOne(id);
-    if (!post) {
-      throw new NotFoundException();
-    }
+  async update(id: string, updatePostDto: UpdatePostDto) {
+    const post = await this.postModel
+      .findByIdAndUpdate(id, updatePostDto, { new: true })
+      .populate('assignedWorkers')
+      .populate('workerActivities');
 
-    Object.assign(post, updatePostDto);
-    return await this.postsRepository.save(post);
+    if (!post) throw new NotFoundException();
+    return post;
   }
 
-  async remove(id: number) {
-    const post = await this.findOne(id);
-    if (!post) {
-      throw new NotFoundException();
-    }
+  async remove(id: string) {
+    const post = await this.postModel.findByIdAndDelete(id);
+    if (!post) throw new NotFoundException();
+    
+    await Promise.all([
+      this.workerActivityModel.deleteMany({ post: id }),
+      this.workerModel.updateMany(
+        { assignedPosts: id },
+        { $pull: { assignedPosts: id } }
+      )
+    ]);
 
-    return await this.postsRepository.remove(post);
+    return { message: 'Post removed successfully' };
   }
 }

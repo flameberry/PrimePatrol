@@ -1,18 +1,21 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Post } from './entities/post.entity';
-import { PostsService } from './posts.service';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PostsController } from './posts.controller';
-import { WorkerModule } from '../worker/worker.module';  // Import WorkerModule
-import { Worker } from 'src/worker/entities/worker.entity';  // Import Worker entity
-import { WorkerActivity } from 'src/worker/entities/worker-activity.entity';  // Import WorkerActivity entity
+import { PostsService } from './posts.service';
+import { Post, PostSchema } from './schemas/post.schema';
+import { Worker, WorkerSchema } from 'src/worker/schemas/worker.schema';
+import { WorkerActivity, WorkerActivitySchema } from 'src/worker/schemas/worker.activity.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, Worker, WorkerActivity]),  // Include Worker and WorkerActivity repositories
-    WorkerModule,  // Ensure WorkerModule is imported here
+    MongooseModule.forFeature([
+      { name: Post.name, schema: PostSchema },
+      { name: Worker.name, schema: WorkerSchema },
+      { name: WorkerActivity.name, schema: WorkerActivitySchema }
+    ])
   ],
-  providers: [PostsService],
   controllers: [PostsController],
+  providers: [PostsService],
+  exports: [PostsService],
 })
 export class PostsModule {}

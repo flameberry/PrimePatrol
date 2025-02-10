@@ -1,30 +1,20 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { join } from 'path';
+import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PostsModule } from './posts/posts.module';
 import { WorkerModule } from './worker/worker.module';
+import { MulterModule } from '@nestjs/platform-express';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: +configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
-        entities: [join(process.cwd(), 'dist/**/*.entity.js')],
-        // do NOT use synchronize: true in real projects
-        synchronize: true,
-        autoLoadEntities: true,
-      }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot('mongodb://localhost:27017/smartwater'),
+    MulterModule.register({
+      dest: './uploads',
     }),
     PostsModule,
     WorkerModule,
@@ -32,4 +22,4 @@ import { WorkerModule } from './worker/worker.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
