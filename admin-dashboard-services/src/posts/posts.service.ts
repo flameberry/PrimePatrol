@@ -1,40 +1,81 @@
-import { Injectable, NotFoundException, RequestTimeoutException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Post, PostDocument } from './schemas/post.schema';
 import { Worker, WorkerDocument } from '../worker/schemas/worker.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { AssignWorkersDto } from '../worker/dto/assign-workers.dto';
-import { CreateWorkerActivityDto } from '../worker/dto/worker-activity.dto';
 import { WorkerActivity, WorkerActivityDocument } from 'src/worker/schemas/worker.activity.schema';
+import { User } from 'src/users/schemas/user.schema';
+import { ConfigService } from '@nestjs/config';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { AssignWorkersDto } from 'src/worker/dto/assign-workers.dto';
+import { CreateWorkerActivityDto } from 'src/worker/dto/worker-activity.dto';
 
 @Injectable()
 export class PostsService {
+  private readonly s3Client: S3Client;
+
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Worker.name) private workerModel: Model<WorkerDocument>,
-    @InjectModel(WorkerActivity.name) private workerActivityModel: Model<WorkerActivityDocument>
-  ) {}
-
-  async create(createPostDto: CreatePostDto, imageUrl: string) {
-    const TIMEOUT_LIMIT = 30000;
-    
-    const post = new this.postModel({
-      ...createPostDto,
-    imageUrl, // Save imageUrl here
+    @InjectModel(WorkerActivity.name) private workerActivityModel: Model<WorkerActivityDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly configService: ConfigService,
+  ) {
+    this.s3Client = new S3Client({
+      region: this.configService.getOrThrow('AWS_S3_REGION'),
     });
+  }
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new RequestTimeoutException()), TIMEOUT_LIMIT)
-    );
-
+  async create(createPostDto: CreatePostDto, file: Express.Multer.File) {
     try {
-      return await Promise.race([post.save(), timeoutPromise]);
+      let imageUrl = null;
+
+      if (file) {
+        // Generate unique filename
+        const fileName = `${Date.now()}-${file.originalname}`;
+        
+        // Upload to S3
+        await this.s3Client.send(
+          new PutObjectCommand({
+            Bucket: 'smartwater-application',
+            Key: fileName,
+            Body: file.buffer,
+            ContentType: file.mimetype,
+          })
+        );
+
+        // Generate S3 URL
+        imageUrl = `https://smartwater-application.s3.${this.configService.get('AWS_S3_REGION')}.amazonaws.com/${fileName}`;
+      }
+
+      // Create the post document with S3 URL
+      const createdPost = new this.postModel({
+        ...createPostDto,
+        imageUrl: imageUrl, // Store the S3 URL instead of local file path
+      });
+      
+      // Save the post
+      const savedPost = await createdPost.save();
+      
+      // Update user's posts
+      const updatedUser = await this.userModel.findByIdAndUpdate(
+        createPostDto.userId,
+        { $push: { postIds: savedPost._id } },
+        { new: true }
+      );
+
+      if (!updatedUser) {
+        throw new NotFoundException(`User with ID ${createPostDto.userId} not found`);
+      }
+
+      return savedPost;
     } catch (error) {
       throw error;
     }
   }
+
 
   async findAll() {
     const posts = await this.postModel
@@ -43,15 +84,7 @@ export class PostsService {
       .populate('workerActivities')
       .exec();
 
-    return posts.map(post => {
-      if (post.imageUrl) {
-        return {
-          ...post.toObject(),
-          imageUrl: `data:image/png;base64,${post.imageUrl}`,
-        };
-      }
-      return post;
-    });
+    return posts;
   }
 
   async findOne(id: string) {
@@ -62,13 +95,6 @@ export class PostsService {
       .exec();
     
     if (!post) throw new NotFoundException();
-
-    if (post.imageUrl) {
-      return {
-        ...post.toObject(),
-        imageUrl: `data:image/png;base64,${post.imageUrl}`,
-      };
-    }
 
     return post;
   }
@@ -148,15 +174,20 @@ export class PostsService {
   async remove(id: string) {
     const post = await this.postModel.findByIdAndDelete(id);
     if (!post) throw new NotFoundException();
-    
+  
     await Promise.all([
       this.workerActivityModel.deleteMany({ post: id }),
       this.workerModel.updateMany(
         { assignedPosts: id },
         { $pull: { assignedPosts: id } }
+      ),
+      this.userModel.updateMany( // Remove post ID from users
+        { postIds: id },
+        { $pull: { postIds: id } }
       )
     ]);
-
+  
     return { message: 'Post removed successfully' };
   }
+  
 }

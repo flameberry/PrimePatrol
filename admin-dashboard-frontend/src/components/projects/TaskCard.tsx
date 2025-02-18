@@ -1,41 +1,54 @@
-import { Reply } from "@mui/icons-material";
+// IncidentCard.tsx
 import React from "react";
 
-// Define the Post type (updated from Task)
-interface Post {
-    name: string;
-    description: string;
-    active: boolean;
-    twitterUrl?: string; // Optional Twitter URL
+interface Incident {
+    id: number;
+    title: string;
+    content: string;
+    imageUrl?: string;
+    status?: 'active' | 'resolved';
+    timestamp?: string;
 }
 
-// Define the props for TaskCard
-interface TaskCardProps {
-    post: Post; // Updated to expect 'post' instead of 'task'
+interface IncidentCardProps {
+    incident: Incident;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ post }) => {
+const IncidentCard: React.FC<IncidentCardProps> = ({ incident }) => {
     return (
-        <div className="w-64 min-w-[256px] h-64 bg-white rounded-lg shadow-lg overflow-hidden relative hover:shadow-xl transition-shadow duration-300">
-            {/* No Image rendering anymore since it's not part of the updated structure */}
-            <div className="p-3">
-                <h3 className="font-bold text-lg text-gray-900">{post.name}</h3>
-                <p className="text-sm text-gray-600">{post.description}</p>
-                <p className="text-sm text-gray-500 italic">{post.active ? "Active" : "Inactive"}</p> {/* Display active status */}
-            </div>
-
-            {post.twitterUrl && (
-                <a
-                    href={post.twitterUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="absolute bottom-2 right-2 bg-blue-500 text-white p-2 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors duration-200"
-                >
-                    <Reply style={{ fontSize: 12 }} />
-                </a>
+        <div className="border rounded-lg shadow-sm hover:shadow-md transition-shadow">
+            {incident.imageUrl && (
+                <div className="w-full h-48 relative">
+                    <img
+                        src={incident.imageUrl}
+                        alt={incident.title}
+                        className="w-full h-full object-cover rounded-t-lg"
+                    />
+                </div>
             )}
+            
+            <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2">{incident.title}</h3>
+                <p className="text-gray-600 mb-2">{incident.content}</p>
+                
+                <div className="flex justify-between items-center">
+                    <span className={`px-2 py-1 rounded text-sm ${
+                        incident.status === 'resolved' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                    }`}>
+                        {incident.status || 'Active'}
+                    </span>
+                    
+                    {incident.timestamp && (
+                        <span className="text-sm text-gray-500">
+                            {new Date(incident.timestamp).toLocaleString()}
+                        </span>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
 
-export default TaskCard;
+export default IncidentCard;

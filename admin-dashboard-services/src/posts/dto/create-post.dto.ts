@@ -3,6 +3,14 @@ import { IsNotEmpty, IsString, IsOptional } from "class-validator";
 
 export class CreatePostDto {
   @ApiProperty({
+    description: 'The user ID associated with the post',
+    example: 'user123',
+  })
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
+
+  @ApiProperty({
     description: 'The title of the post',
     example: 'Water Leak in Building A',
   })

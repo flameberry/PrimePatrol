@@ -6,6 +6,9 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PostsModule } from './posts/posts.module';
 import { WorkerModule } from './worker/worker.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { join } from 'path';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -16,8 +19,13 @@ import { MulterModule } from '@nestjs/platform-express';
     MulterModule.register({
       dest: './uploads',
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'), // Adjust the path as needed
+      serveRoot: '/uploads/', // This is the route where the static files will be served
+    }),
     PostsModule,
     WorkerModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

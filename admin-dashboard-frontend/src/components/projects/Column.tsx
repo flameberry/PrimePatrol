@@ -1,37 +1,36 @@
+// Column.tsx
 import React from "react";
-import TaskCard from "./TaskCard"; // You can still use the TaskCard component
+import IncidentCard from "./TaskCard";
 
-// Define the props type for Column
+interface Incident {
+    id: number;
+    title: string;
+    content: string;
+    imageUrl?: string;
+    status?: 'active' | 'resolved';
+    timestamp?: string;
+}
+
 interface ColumnProps {
     title: string;
-    posts: Post[]; // Updated to posts instead of tasks
-    color?: string; // Optional Tailwind CSS background color class
+    incidents: Incident[];
+    color?: string;
 }
 
-// Post type definition (previously Task)
-interface Post {
-    id: number; // Assuming posts have unique ids
-    name: string;
-    description: string;
-    active: boolean;
-}
-
-const Column: React.FC<ColumnProps> = ({ title, posts, color = "bg-gray-200" }) => {
-
-    console.log("Posts: ",posts);
-    
-
+const Column: React.FC<ColumnProps> = ({ title, incidents, color = "bg-gray-200" }) => {
     return (
-        <div className="w-full p-3">
-            <h2 className="text-xl font-bold mb-3">{title}</h2>
-            <div className={`rounded-lg p-3 shadow-lg ${color}`}>
-                {/* Horizontal scroll area */}
-                <div className="flex space-x-3 overflow-x-auto p-2 scrollbar-hide">
-                    {posts.length !== 0 ? (
-                        <NoPostsAvailable />
+        <div className="flex-1 min-w-[300px]">
+            <div className={`${color} p-4 rounded-t-lg`}>
+                <h2 className="text-lg font-semibold">{title}</h2>
+            </div>
+            
+            <div className="border rounded-b-lg bg-white">
+                <div className="p-4 space-y-4">
+                    {incidents.length === 0 ? (
+                        <NoIncidentsAvailable />
                     ) : (
-                        posts.map((post) => (
-                            <TaskCard key={post.id} post={post} /> // Passing post instead of task
+                        incidents.map((incident) => (
+                            <IncidentCard key={incident.id} incident={incident} />
                         ))
                     )}
                 </div>
@@ -40,9 +39,10 @@ const Column: React.FC<ColumnProps> = ({ title, posts, color = "bg-gray-200" }) 
     );
 };
 
-// Component for empty state
-const NoPostsAvailable = () => (
-    <p className="text-gray-500">No posts available.</p>
+const NoIncidentsAvailable = () => (
+    <div className="text-center text-gray-500 py-4">
+        No incidents in this category.
+    </div>
 );
 
 export default Column;

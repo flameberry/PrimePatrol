@@ -24,8 +24,7 @@ import { AssignWorkersDto } from 'src/worker/dto/assign-workers.dto';
 import { CreateWorkerActivityDto } from 'src/worker/dto/worker-activity.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Express } from 'express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
 
 @Controller('posts')
 @ApiTags('Posts')
@@ -37,19 +36,16 @@ export class PostsController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads', // Store files in the uploads folder
-        filename: (req, file, cb) => {
-          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, uniqueSuffix + extname(file.originalname)); // Save with unique name
-        },
-      }),
-    }),
+      storage: memoryStorage(), // Use memory storage instead of disk storage
+    })
   )
-  async createPost(@Body() createPostDto: CreatePostDto, @UploadedFile() file: Express.Multer.File) {
-    const imageUrl = file ? `/uploads/${file.filename}` : null; // Assuming static folder serves these files
-    return this.postsService.create(createPostDto, imageUrl);
+  async createPost(
+    @Body() createPostDto: CreatePostDto,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    return this.postsService.create(createPostDto, file);
   }
+
 
   @Get()
   @ApiOperation({ summary: 'Get all posts' })

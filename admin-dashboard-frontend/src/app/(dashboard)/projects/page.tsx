@@ -1,69 +1,110 @@
+// ProjectsPage.tsx
 "use client";
 
 import Column from "@/components/projects/Column";
 import React, { useState, useEffect } from "react";
 
-// Define the interface for Post (formerly Task)
-interface Post {
+interface Incident {
     id: number;
-    name: string;
-    description: string;
-    active: boolean;
+    title: string;
+    content: string;
+    imageUrl?: string;
+    status?: 'active' | 'resolved';
+    timestamp?: string;
 }
 
-// Define the interface for Column
 interface ColumnData {
     title: string;
     color: string;
-    posts: Post[];
+    incidents: Incident[];
 }
 
 const ProjectsPage: React.FC = () => {
-    // State for storing the fetched columns data
-    const [columns, setColumns] = useState<ColumnData[]>([]);
-
-    // State for loading and error handling
-    const [loading, setLoading] = useState<boolean>(true);
+    const [columns, setColumns] = useState<Record<string, ColumnData>>({});
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch data from API
-    useEffect(() => {
-        const fetchColumnsData = async () => {
-            try {
-                const response = await fetch("http://localhost:3000/api/posts");
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                console.log("Data fetched:", data);  // Log the data to inspect its structure
-
-                // Default posts to empty array if not present
-                const formattedData = data.map((column: any) => ({
-                    title: column.title,
-                    color: column.color,
-                    posts: column.posts || [], // Fallback to empty array if posts are undefined
-                }));
-
-                setColumns(formattedData);
-            } catch (err) {
-                setError("Failed to load data. Please try again.");
-            } finally {
-                setLoading(false);
+    const fetchIncidentsData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await fetch("http://localhost:3000/posts");
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        };
 
-        fetchColumnsData();
-    }, []); // Empty dependency array to only fetch once on mount
+            const data = await response.json();
+            console.log("The data is: ", data);
+            
+            
+            // Transform the data into our column structure
+            const formattedData: Record<string, ColumnData> = {
+                active: {
+                    title: "Active Incidents",
+                    color: "bg-red-200",
+                    incidents: data.filter((incident: Incident) => 
+                        incident.status !== 'resolved'
+                    )
+                },
+                resolved: {
+                    title: "Resolved Incidents",
+                    color: "bg-green-200",
+                    incidents: data.filter((incident: Incident) => 
+                        incident.status === 'resolved'
+                    )
+                }
+            };
 
-    if (loading) return <div className="text-center py-10">Loading...</div>;
-    if (error) return <div className="text-center py-10 text-red-500">{error}</div>;
+            setColumns(formattedData);
+        } catch (err) {
+            console.error("Fetch error:", err);
+            setError("Failed to load incidents. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchIncidentsData();
+    }, []);
+
+    if (loading) return (
+        <div className="flex justify-center items-center min-h-screen">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        </div>
+    );
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+                <div className="text-red-500 mb-4">{error}</div>
+                <button 
+                    onClick={fetchIncidentsData}
+                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex flex-col p-5 space-y-4">
-            {/* Columns */}
-            {columns.map((column, index) => (
-                <Column key={index} title={column.title} posts={column.posts} color={column.color} />
-            ))}
+        <div className="flex flex-col md:flex-row gap-4 p-4">
+            {Object.keys(columns).length > 0 ? (
+                Object.entries(columns).map(([key, column]) => (
+                    <Column
+                        key={key}
+                        title={column.title}
+                        incidents={column.incidents}
+                        color={column.color}
+                    />
+                ))
+            ) : (
+                <div className="w-full text-center text-gray-500 py-8">
+                    No incidents reported.
+                </div>
+            )}
         </div>
     );
 };
