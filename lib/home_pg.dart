@@ -1,5 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:smartwater/shop_pg.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+// Post class remains the same
+class Post {
+  final String id;
+  final String title;
+  final String content;
+  final String imageUrl;
+  final String? status;
+  final DateTime createdAt;
+
+  Post({
+    required this.id,
+    required this.title,
+    required this.content,
+    required this.imageUrl,
+    this.status,
+    required this.createdAt,
+  });
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    try {
+      return Post(
+        id: json['_id'] ?? '',
+        title: json['title'] ?? 'Untitled',
+        content: json['content'] ?? 'No content',
+        imageUrl: json['imageUrl'] ?? '',
+        status: json['status'],
+        createdAt: json['createdAt'] != null
+            ? DateTime.parse(json['createdAt'])
+            : DateTime.now(),
+      );
+    } catch (e) {
+      print('Error parsing post: $json');
+      print('Error details: $e');
+      rethrow;
+    }
+  }
+}
 
 class HomePg extends StatefulWidget {
   const HomePg({super.key});
@@ -10,222 +50,247 @@ class HomePg extends StatefulWidget {
 
 class _HomePgState extends State<HomePg> {
   int currentIndex = 0;
-  String selectedCategory = 'Categories'; // Default selected category
+  bool isLoading = true;
+  String? error;
+  List<Post> posts = [];
 
-  // Categories for dropdown
-  final List<String> categories = [
-    'Categories',
-    'Garbage Disposal',
-    'Flooding',
-    'Industrial Waste'
-  ];
+  final String apiUrl = "http://192.168.1.3:3000/posts";
 
-  // Image list for swipable stack
-  final List<String> imagePaths = [
-    'assets/inds.png',
-    'assets/garbage.png',
-    'assets/water_prob.png',
-  ];
+  @override
+  void initState() {
+    super.initState();
+    fetchPosts();
+  }
 
-  // Subtitles for each image
-  final List<String> imageSubtitles = [
-    'Industrial Waste Issues',
-    'Garbage Disposal Problems',
-    'Water Logging Concerns',
-  ];
+  Future<void> fetchPosts() async {
+    try {
+      final response = await http.get(Uri.parse(apiUrl));
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        setState(() {
+          posts = data.map((item) => Post.fromJson(item)).toList();
+          isLoading = false;
+          error = null;
+        });
+      } else {
+        throw Exception('Failed to load posts: ${response.statusCode}');
+      }
+    } catch (e) {
+      print("Error fetching posts: $e");
+      setState(() {
+        isLoading = false;
+        error = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        toolbarHeight: 20,
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(toolbarHeight: 20, backgroundColor: Colors.white),
       backgroundColor: Colors.white,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Welcome text and water drop icon
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Welcome User', // "Welcome User" text at the top
-                  style: TextStyle(
-                    fontSize: 24.0,
-                    fontWeight: FontWeight.bold,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : error != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('Error: $error'),
+                      ElevatedButton(
+                        onPressed: fetchPosts,
+                        child: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                ),
-                Row(
-                  children: [
-                    const Text(
-                      '10', // Text to the left of the icon
-                      style: TextStyle(
-                        fontSize: 18.0,
-                        color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(width: 8.0), // Spacing between text and icon
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => const ShopPg()));
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8.0),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.blue[900], // Blue circle background
-                        ),
-                        child: const Icon(
-                          Icons.water_drop, // Water drop icon
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Dropdown for categories
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white, // White background
-                border: Border.all(color: Colors.black), // Black border
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: DropdownButton<String>(
-                  value: selectedCategory,
-                  isExpanded: true, // Make the dropdown fill the width
-                  underline: const SizedBox(), // Remove the default underline
-                  alignment: Alignment.center, // Center the dropdown text
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      selectedCategory = newValue!;
-                    });
-                  },
-                  items: categories
-                      .map<DropdownMenuItem<String>>((String category) {
-                    return DropdownMenuItem<String>(
-                      value: category,
-                      child: Center(
-                        child: Text(
-                          category,
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            color: Colors.black,
-                          ),
+                )
+              : SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Welcome User',
+                              style: TextStyle(
+                                fontSize: 24.0,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                const Text(
+                                  '10',
+                                  style: TextStyle(
+                                      fontSize: 18.0, color: Colors.black),
+                                ),
+                                const SizedBox(width: 8.0),
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const ShopPg(),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8.0),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.blue[900],
+                                    ),
+                                    child: const Icon(
+                                      Icons.water_drop,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            height: 30,
-          ),
+                      if (posts.isNotEmpty)
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 500),
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  height: 300,
+                                  child: GestureDetector(
+                                    onHorizontalDragEnd: (details) {
+                                      setState(() {
+                                        if (details.primaryVelocity! < 0) {
+                                          currentIndex =
+                                              (currentIndex + 1) % posts.length;
+                                        } else if (details.primaryVelocity! >
+                                            0) {
+                                          currentIndex = (currentIndex -
+                                                  1 +
+                                                  posts.length) %
+                                              posts.length;
+                                        }
+                                      });
+                                    },
+                                    child: Stack(
+                                      alignment: Alignment.center,
+                                      children:
+                                          posts.asMap().entries.map((entry) {
+                                        int idx = entry.key;
+                                        Post post = entry.value;
 
-          // Stack displaying images with rounded corners and subtitle
-          SizedBox(
-            height: 380.0, // Height for the swipeable stack
-            child: Center(
-              child: GestureDetector(
-                onHorizontalDragEnd: (details) {
-                  setState(() {
-                    if (details.primaryVelocity! < 0) {
-                      // Swipe left
-                      currentIndex = (currentIndex + 1) % imagePaths.length;
-                    } else if (details.primaryVelocity! > 0) {
-                      // Swipe right
-                      currentIndex = (currentIndex - 1 + imagePaths.length) %
-                          imagePaths.length;
-                    }
-                  });
-                },
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: imagePaths.asMap().entries.map((entry) {
-                        int idx = entry.key;
-                        String imagePath = entry.value;
-
-                        return AnimatedOpacity(
-                          duration: const Duration(milliseconds: 300),
-                          opacity: idx == currentIndex ? 1.0 : 0.0,
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(15.0), // Rounded corners
-                            child: Image.asset(
-                              imagePath,
-                              width: 300.0,
-                              height: 300.0,
-                              fit: BoxFit.cover,
+                                        return AnimatedOpacity(
+                                          duration:
+                                              const Duration(milliseconds: 300),
+                                          opacity:
+                                              idx == currentIndex ? 1.0 : 0.0,
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(15.0),
+                                            child: Image.network(
+                                              post.imageUrl,
+                                              width: 300.0,
+                                              height: 300.0,
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child,
+                                                  loadingProgress) {
+                                                if (loadingProgress == null) {
+                                                  return child;
+                                                }
+                                                return const Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              },
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                return const Center(
+                                                  child: Text(
+                                                      'Failed to load image'),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        posts[currentIndex].title,
+                                        style: const TextStyle(
+                                          fontSize: 18.0,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8.0),
+                                      Text(
+                                        posts[currentIndex].content,
+                                        style: const TextStyle(
+                                          fontSize: 16.0,
+                                          color: Colors.black54,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                      const SizedBox(height: 8.0),
+                                      if (posts[currentIndex].status != null)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12.0,
+                                            vertical: 6.0,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: posts[currentIndex].status ==
+                                                    'pending'
+                                                ? Colors.orange[100]
+                                                : Colors.green[100],
+                                            borderRadius:
+                                                BorderRadius.circular(20.0),
+                                          ),
+                                          child: Text(
+                                            posts[currentIndex]
+                                                .status!
+                                                .toUpperCase(),
+                                            style: TextStyle(
+                                              color:
+                                                  posts[currentIndex].status ==
+                                                          'pending'
+                                                      ? Colors.orange[900]
+                                                      : Colors.green[900],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 10.0),
-                    Text(
-                      imageSubtitles[currentIndex], // Display subtitle
-                      style: const TextStyle(
-                        fontSize: 16.0,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
+                        )
+                      else
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text('No posts available'),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-
-          // Box with caution icon and text
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black), // Black border
-                borderRadius: BorderRadius.circular(10),
-                color: Colors.white, // White background
-              ),
-              padding:
-                  const EdgeInsets.symmetric(vertical: 20.0, horizontal: 10.0),
-              child: const Row(
-                children: [
-                  Icon(
-                    Icons.warning, // Caution icon
-                    color: Colors.red, // Icon color
-                    size: 30.0, // Icon size
-                  ),
-                  SizedBox(width: 10.0), // Space between icon and text
-                  Expanded(
-                    child: Text(
-                      '20 cases reported in 24 hrs', // Sample text
-                      style: TextStyle(fontSize: 16.0, color: Colors.black),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

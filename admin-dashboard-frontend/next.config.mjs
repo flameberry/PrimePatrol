@@ -13,6 +13,14 @@ const nextConfig = {
         },
       ];
     },
+    images: {
+      remotePatterns: [
+        {
+          protocol: "https",
+          hostname: "smartwater-application.s3.us-east-1.amazonaws.com",
+        },
+      ],
+    },
   };
   
   export default nextConfig;

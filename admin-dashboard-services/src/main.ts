@@ -41,18 +41,18 @@ async function bootstrap() {
     .setDescription(`
       The SmartWater API provides endpoints to manage and interact with the SmartWater mobile application. 
       
-      ### **Key Features**
-      1. **User Authentication**: Secure JWT-based authentication.
-      2. **Community Reporting**: Report water-related issues (floods, pollution, droughts).
-      3. **Shakti Points & Referral Rewards**: Earn points for contributing reports.
-      4. **Real-time Alerts**: Notify users within a 2km radius of reported issues.
-      5. **Crowdsourced Data Collection via Twitter Bot**.
-      6. **Image Classification with CNN**.
-      7. **Intent Matching Algorithm**: Group similar reports to reduce redundancy.
-      8. **Blockchain-based Donation System**.
-      9. **Admin Dashboard for Analytics & Report Tracking**.
-      10. **Government Notifications for Critical Issues**.
-      11. **Multilingual Support & Accessibility Features**.
+      ### Key Features
+      1. User Authentication: Secure JWT-based authentication.
+      2. Community Reporting: Report water-related issues (floods, pollution, droughts).
+      3. Shakti Points & Referral Rewards: Earn points for contributing reports.
+      4. Real-time Alerts: Notify users within a 2km radius of reported issues.
+      5. Crowdsourced Data Collection via Twitter Bot.
+      6. Image Classification with CNN.
+      7. Intent Matching Algorithm: Group similar reports to reduce redundancy.
+      8. Blockchain-based Donation System.
+      9. Admin Dashboard for Analytics & Report Tracking.
+      10. Government Notifications for Critical Issues.
+      11. Multilingual Support & Accessibility Features.
     `)
     .setVersion('1.0')
     .addTag('posts')

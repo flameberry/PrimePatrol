@@ -28,6 +28,14 @@ export class PostsService {
     });
   }
 
+  async getPostStats() {
+    const totalPosts = await this.postModel.countDocuments();
+    const activePosts = await this.postModel.countDocuments({ status: 'Active' });
+    const resolvedPosts = await this.postModel.countDocuments({ status: 'resolved' });
+
+    return { totalPosts, activePosts, resolvedPosts };
+  }
+
   async create(createPostDto: CreatePostDto, file: Express.Multer.File) {
     try {
       let imageUrl = null;
@@ -75,7 +83,6 @@ export class PostsService {
       throw error;
     }
   }
-
 
   async findAll() {
     const posts = await this.postModel

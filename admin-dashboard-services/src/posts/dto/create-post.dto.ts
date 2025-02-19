@@ -27,6 +27,14 @@ export class CreatePostDto {
   content: string;
 
   @ApiProperty({
+    description: 'The status of the post',
+    example: 'pending',
+  })
+  @IsString()
+  @IsNotEmpty()
+  status: string;
+
+  @ApiProperty({
     description: 'The image file (upload via multipart/form-data)',
     type: 'string',
     format: 'binary',

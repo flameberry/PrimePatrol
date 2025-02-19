@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import html2canvas from 'html2canvas';
 import DataCard from "@/components/DataCard";
 import ComplaintTracker from "@/components/charts/ComplaintTracker";
 import NewsUpdate from "@/components/charts/NewsUpdate";
@@ -16,80 +15,74 @@ interface ExtendedJsPDF extends jsPDF {
 }
 
 export default function DashboardPage() {
+  // State for fetched data
+  const [dashboardData, setDashboardData] = useState({
+    totalPosts: 0,
+    issuesInitiated: 0,
+    issuesResolved: 0,
+    workInProgress: 0,
+  });
+
+  // Fetch data from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("http://localhost:3000/posts/stats");
+        const data = await response.json();
+        console.log("the data is: ", data);
+        
+
+        setDashboardData({
+          totalPosts: data.totalPosts,
+          issuesInitiated: data.totalPosts,
+          issuesResolved: data.resolvedPosts,
+          workInProgress: data.activePosts,
+        });
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Refs for chart components
   const totalIssuesChartRef = useRef<HTMLDivElement>(null);
   const complaintTrackerRef = useRef<HTMLDivElement>(null);
   const problemsFacedChartRef = useRef<HTMLDivElement>(null);
 
-const generateReport = async () => {
-  const doc = new jsPDF("portrait", "pt", "a4") as ExtendedJsPDF;
+  const generateReport = async () => {
+    const doc = new jsPDF("portrait", "pt", "a4") as ExtendedJsPDF;
 
-  // Add title
-  doc.setFontSize(18);
-  doc.text("Dashboard Report", 40, 30);
+    // Add title
+    doc.setFontSize(18);
+    doc.text("Dashboard Report", 40, 30);
 
-  // Add date
-  doc.setFontSize(11);
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, 40, 50);
+    // Add date
+    doc.setFontSize(11);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 40, 50);
 
-  // Add Data Cards information
-  doc.setFontSize(14);
-  doc.text("Summary", 40, 80);
-  
-  const tableData = [
-    ["Total Posts Created", "95"],
-    ["Issues Initiated", "300"],
-    ["Issues Resolved", "5"],
-    ["Work In-progress", "8"],
-  ];
-  
-  autoTable(doc, {
-    startY: 85,
-    head: [["Metric", "Value"]],
-    body: tableData,
-    margin: { left: 40 },
-  });
+    // Add Data Cards information
+    doc.setFontSize(14);
+    doc.text("Summary", 40, 80);
 
-  // Add margin after the table
-  let yOffset = doc.lastAutoTable.finalY + 60; // Add extra margin after table
+    const tableData = [
+      ["Total Posts Created", dashboardData.totalPosts.toString()],
+      ["Issues Initiated", dashboardData.issuesInitiated.toString()],
+      ["Issues Resolved", dashboardData.issuesResolved.toString()],
+      ["Work In-progress", dashboardData.workInProgress.toString()],
+    ];
 
-  // Function to capture and add chart images (two per row)
-  const addTwoChartImages = async (
-    chartRef1: React.RefObject<HTMLDivElement>, 
-    title1: string, 
-    chartRef2: React.RefObject<HTMLDivElement>, 
-    title2: string
-  ) => {
-    if (chartRef1.current && chartRef2.current) {
-      const canvas1 = await html2canvas(chartRef1.current);
-      const canvas2 = await html2canvas(chartRef2.current);
+    autoTable(doc, {
+      startY: 85,
+      head: [["Metric", "Value"]],
+      body: tableData,
+      margin: { left: 40 },
+    });
 
-      const imgData1 = canvas1.toDataURL('image/png');
-      const imgData2 = canvas2.toDataURL('image/png');
-
-      doc.setFontSize(14);
-      doc.text(title1, 40, yOffset);
-      doc.addImage(imgData1, 'PNG', 40, yOffset + 10, 240, 120); // First chart
-
-      doc.text(title2, 300, yOffset);
-      doc.addImage(imgData2, 'PNG', 300, yOffset + 10, 240, 120); // Second chart
-
-      // Add margin after the charts
-      yOffset += 150; // Increase Y offset for the next row to include margin
-    }
+    // Save the PDF
+    doc.save("dashboard-report.pdf");
   };
-
-  // Add charts (two per row)
-  await addTwoChartImages(totalIssuesChartRef, "Total Issues", complaintTrackerRef, "Complaint Tracker");
-  await addTwoChartImages(problemsFacedChartRef, "Problems Faced", totalIssuesChartRef, "Total Issues Again"); // You can replace with other charts
-
-  // Final margin before saving the PDF
-  yOffset += 60; // Additional margin before saving, if needed
-
-  // Save the PDF
-  doc.save("dashboard-report.pdf");
-};
-
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -97,7 +90,7 @@ const generateReport = async () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-blue-900">Today's Issues Reported</h2>
         {/* Export Button */}
-        <button 
+        <button
           className="flex items-center px-4 py-2 border border-blue-700 text-blue-700 rounded-md hover:bg-blue-50"
           onClick={generateReport}
         >
@@ -123,25 +116,25 @@ const generateReport = async () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <DataCard
           name="Total Posts Created"
-          amount={95}
+          amount={dashboardData.totalPosts}
           bgColor="bg-red-100"
           icon="chart-bar"
         />
         <DataCard
           name="Issues Initiated"
-          amount={300}
+          amount={dashboardData.issuesInitiated}
           bgColor="bg-yellow-100"
           icon="clipboard-list"
         />
         <DataCard
           name="Issues Resolved"
-          amount={5}
+          amount={dashboardData.issuesResolved}
           bgColor="bg-green-100"
           icon="check-circle"
         />
         <DataCard
           name="Work In-progress"
-          amount={8}
+          amount={dashboardData.workInProgress}
           bgColor="bg-purple-100"
           icon="users"
         />

@@ -18,6 +18,12 @@ export class Post {
   @Prop()
   imageUrl: string;
 
+  @Prop()
+  status: string;
+
+  @Prop()
+  predictedScore: string;
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Worker' }] })
   assignedWorkers: Worker[];
 
