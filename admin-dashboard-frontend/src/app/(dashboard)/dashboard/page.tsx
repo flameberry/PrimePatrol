@@ -88,7 +88,7 @@ export default function DashboardPage() {
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold text-blue-900">Today's Issues Reported</h2>
+        <h2 className="text-xl font-bold text-blue-900">Today&apos;s Issues Reported</h2>
         {/* Export Button */}
         <button
           className="flex items-center px-4 py-2 border border-blue-700 text-blue-700 rounded-md hover:bg-blue-50"

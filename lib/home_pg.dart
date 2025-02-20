@@ -55,15 +55,18 @@ class _HomePgState extends State<HomePg> {
   bool isLoading = true;
   String? error;
   List<Post> posts = [];
-  final String apiUrl = "http://192.168.1.41:3000/posts";
-  final String userApiUrl = "http://192.168.1.41:3000/users";
+  Set<String> upvotedPosts = {}; // Track upvoted posts
+  Set<String> downvotedPosts = {}; // Track downvoted posts
+  final String apiUrl = "http://192.168.1.3:3000/posts";
+  final String userApiUrl = "http://192.168.1.3:3000/users";
 
   @override
   void initState() {
     super.initState();
     fetchPosts();
   }
-      Future<void> fetchPosts() async {
+
+  Future<void> fetchPosts() async {
     try {
       final response = await http.get(Uri.parse(apiUrl));
       if (response.statusCode == 200) {
@@ -117,13 +120,11 @@ class _HomePgState extends State<HomePg> {
     }
   }
 
-  Future<void> sendPushNotification({
-    required String fcmToken
-  }) async {
+  Future<void> sendPushNotification({required String fcmToken}) async {
     try {
       final ConnectionSettings settings = ConnectionSettings(
         host: '10.0.2.2',
-        // host: '192.168.1.41',
+        // host: '192.168.1.3',
         port: 5672,
         authProvider: PlainAuthenticator('guest', 'guest'),
       );
@@ -132,30 +133,36 @@ class _HomePgState extends State<HomePg> {
       Channel channel = await client.channel();
       Queue queue = await channel.queue('notification_queue', durable: true);
 
-      String jsonMessage = jsonEncode({
-        "fcm_token": fcmToken
-      });
+      String jsonMessage = jsonEncode({"fcm_token": fcmToken});
 
       queue.publish(jsonMessage);
-      print('✅ Notification request sent to queue successfully for token: $fcmToken');
+      print(
+          '✅ Notification request sent to queue successfully for token: $fcmToken');
       client.close();
     } catch (e) {
       print('❌ Error sending notification request to RabbitMQ: $e');
     }
   }
 
-
-  // void upvotePost(int index) {
-  //   setState(() {
-  //     posts[index].upvotes++;
-  //
-  //   });
-  // }
   Future<void> upvotePost(int index) async {
     final post = posts[index];
+    final postId = posts[index].id;
 
     setState(() {
-      posts[index].upvotes++;
+      if (upvotedPosts.contains(postId)) {
+        // If already upvoted, remove the upvote
+        posts[index].upvotes--;
+        upvotedPosts.remove(postId);
+      } else {
+        // If downvoted before, remove the downvote
+        if (downvotedPosts.contains(postId)) {
+          posts[index].downvotes--;
+          downvotedPosts.remove(postId);
+        }
+        // Add upvote
+        posts[index].upvotes++;
+        upvotedPosts.add(postId);
+      }
     });
 
     // Get FCM token for the post creator
@@ -163,9 +170,7 @@ class _HomePgState extends State<HomePg> {
 
     if (fcmToken != null) {
       // Send notification through RabbitMQ
-      await sendPushNotification(
-        fcmToken: fcmToken
-      );
+      await sendPushNotification(fcmToken: fcmToken);
     }
 
     // try {
@@ -189,10 +194,24 @@ class _HomePgState extends State<HomePg> {
     // }
   }
 
-
   void downvotePost(int index) {
+    final postId = posts[index].id;
+
     setState(() {
-      posts[index].downvotes++;
+      if (downvotedPosts.contains(postId)) {
+        // If already downvoted, remove the downvote
+        posts[index].downvotes--;
+        downvotedPosts.remove(postId);
+      } else {
+        // If upvoted before, remove the upvote
+        if (upvotedPosts.contains(postId)) {
+          posts[index].upvotes--;
+          upvotedPosts.remove(postId);
+        }
+        // Add downvote
+        posts[index].downvotes++;
+        downvotedPosts.add(postId);
+      }
     });
   }
 

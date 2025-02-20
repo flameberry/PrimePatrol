@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -34,7 +34,6 @@ export default function SideBarLayout(props: Props) {
     const pathname = usePathname();
     const router = useRouter();
 
-
     const handleCollapse = () => {
         setIsCollapse(!isCollapse);
     };
@@ -48,33 +47,45 @@ export default function SideBarLayout(props: Props) {
         debounce((path: string) => {
             router.push(path);
         }, 100),
-        [router]
+        [router] // Add router as a dependency
     );
 
     const drawer = (
         <div>
-            <Toolbar>
+            <Toolbar sx={{ bgcolor: '#1E293B', color: '#FFFFFF' }}>
                 <Image src="/app-logo.png" alt="app logo" width={60} height={100} />
-                <Typography variant="h6" noWrap component="div">
+                <Typography variant="h6" noWrap component="div" sx={{ ml: 2 }}>
                     SmartWater
                 </Typography>
             </Toolbar>
             <Divider />
             <List>
-                {['Dashboard', 'Projects', 'Users', 'Settings'].map((text, index) => (
+                {['Dashboard', 'Projects', 'Workers', 'Settings'].map((text, index) => (
                     <ListItem
                         key={text}
                         disablePadding
-                        className={pathname.startsWith("/" + text.toLowerCase()) ? "text-sky-600 bg-slate-100" : "text-slate-700"}
+                        sx={{
+                            bgcolor: pathname.startsWith("/" + text.toLowerCase()) ? '#E2E8F0' : 'transparent',
+                            '&:hover': {
+                                bgcolor: '#F1F5F9',
+                            },
+                        }}
                     >
                         <ListItemButton
                             onClick={() => debouncedNavigate("/" + text.toLowerCase())}
+                            sx={{
+                                color: pathname.startsWith("/" + text.toLowerCase()) ? '#1E40AF' : '#4A5568',
+                                '&:hover': {
+                                    color: '#1E40AF',
+                                },
+                            }}
                         >
                             <ListItemIcon
-                                className={pathname.startsWith("/" + text.toLowerCase()) ? "text-sky-600" : "text-slate-700"}
+                                sx={{
+                                    color: pathname.startsWith("/" + text.toLowerCase()) ? '#1E40AF' : '#4A5568',
+                                }}
                             >
                                 {index === 0 && <SpaceDashboardIcon />}
-                                {/* {index === 1 && <InsightsIcon />} */}
                                 {index === 1 && <AccountTreeIcon />}
                                 {index === 2 && <PeopleAltIcon />}
                                 {index === 3 && <SettingsInputComponentIcon />}
@@ -125,24 +136,13 @@ export default function SideBarLayout(props: Props) {
                 sx={{
                     width: { sm: `calc(100% - ${drawerWidth}px)` },
                     ml: { sm: `${drawerWidth}px` },
-                    bgcolor: "#FFFFFF",
-                    color: "#2F2F2F",
+                    bgcolor: '#FFFFFF',
+                    color: '#2F2F2F',
+                    boxShadow: 'none',
+                    borderBottom: '1px solid #E2E8F0',
                 }}
             >
-                {/* <Toolbar>
-                    <IconButton
-                        color="inherit"
-                        aria-label="open drawer"
-                        edge="start"
-                        onClick={handleDrawerToggle}
-                        sx={{ mr: 2, display: { sm: 'none' } }}
-                    >
-                        <MenuIcon />
-                    </IconButton>
-                    
-                </Toolbar> */}
                 <Header />
-
             </AppBar>
             <Box
                 component="nav"
@@ -180,7 +180,6 @@ export default function SideBarLayout(props: Props) {
                 sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
             >
                 <Toolbar />
-                {/* {loading ? <Typography>Loading...</Typography> : children} Show loading state */}
                 {children}
             </Box>
         </Box>
