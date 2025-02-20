@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:smartwater/nav_bar.dart';
 
 class LoginPg extends StatefulWidget {
@@ -12,6 +13,7 @@ class _LoginPgState extends State<LoginPg> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   Future<void> _login() async {
     try {
@@ -37,20 +39,65 @@ class _LoginPgState extends State<LoginPg> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    try {
+      // Trigger Google Sign-In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return; // User canceled the sign-in
+
+      // Obtain auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create a new credential
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      await _auth.signInWithCredential(credential);
+
+      // Navigate to home page after successful login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NavBar()),
+      );
+    } catch (e) {
+      _showErrorDialog('Google Sign-In failed. Please try again.');
+    }
+  }
+
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Login Error'),
-          content: Text(message),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.0),
+          ),
+          title: Text(
+            'Login Error',
+            style: TextStyle(
+              color: Colors.red[700],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            message,
+            style: TextStyle(color: Colors.grey[800]),
+          ),
           actions: <Widget>[
             TextButton(
-              child: Text('OK'),
+              child: Text(
+                'OK',
+                style: TextStyle(color: Color(0xFF2E66D7)),
+              ),
               onPressed: () {
                 Navigator.of(context).pop();
               },
-            ),
+            )
           ],
         );
       },
@@ -69,27 +116,45 @@ class _LoginPgState extends State<LoginPg> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                SizedBox(height: 30),
+                SizedBox(height: 60),
                 // App logo
                 Container(
                   margin: EdgeInsets.only(bottom: 24.0),
                   child: Image.asset(
                     'assets/logo.png', // Add your app logo image path here
-                    height: 260.0, // Set the height of the logo
-                    width: 260.0, // Set the width of the logo
+                    height: 160.0, // Set the height of the logo
+                    width: 160.0, // Set the width of the logo
                   ),
                 ),
-                // Email Text Field inside a styled container
+                Text(
+                  'Welcome Back!',
+                  style: TextStyle(
+                    fontSize: 24.0,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E66D7),
+                  ),
+                ),
+                SizedBox(height: 8.0),
+                Text(
+                  'Sign in to continue',
+                  style: TextStyle(
+                    fontSize: 16.0,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 40.0),
+                // Email Text Field
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withOpacity(0.2),
                         spreadRadius: 2,
-                        blurRadius: 5,
-                      ),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      )
                     ],
                   ),
                   child: TextFormField(
@@ -100,6 +165,7 @@ class _LoginPgState extends State<LoginPg> {
                           horizontal: 16.0, vertical: 14.0),
                       labelText: 'Email',
                       labelStyle: TextStyle(color: Colors.grey[600]),
+                      prefixIcon: Icon(Icons.email, color: Colors.grey[600]),
                     ),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
@@ -113,18 +179,19 @@ class _LoginPgState extends State<LoginPg> {
                     },
                   ),
                 ),
-                SizedBox(height: 16.0),
-                // Password Text Field inside a styled container
+                SizedBox(height: 20.0),
+                // Password Text Field
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
+                        color: Colors.grey.withOpacity(0.2),
                         spreadRadius: 2,
-                        blurRadius: 5,
-                      ),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
+                      )
                     ],
                   ),
                   child: TextFormField(
@@ -135,6 +202,7 @@ class _LoginPgState extends State<LoginPg> {
                           horizontal: 16.0, vertical: 14.0),
                       labelText: 'Password',
                       labelStyle: TextStyle(color: Colors.grey[600]),
+                      prefixIcon: Icon(Icons.lock, color: Colors.grey[600]),
                     ),
                     obscureText: true,
                     validator: (value) {
@@ -148,7 +216,7 @@ class _LoginPgState extends State<LoginPg> {
                   ),
                 ),
                 SizedBox(height: 24.0),
-                // Login Button styled with dark blue background and white text
+                // Login Button
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -163,13 +231,92 @@ class _LoginPgState extends State<LoginPg> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                       ),
+                      elevation: 5,
                     ),
                     child: Text(
                       'Login',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
                       ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.0),
+                // OR Divider
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey[400],
+                        thickness: 1,
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14.0,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(
+                        color: Colors.grey[400],
+                        thickness: 1,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 20.0),
+                // Google Sign-In Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _signInWithGoogle,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      elevation: 5,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/google_logo.png', // Add Google logo asset
+                          height: 24.0,
+                          width: 24.0,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Sign in with Google',
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 16.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.0),
+                // Forgot Password Link
+                TextButton(
+                  onPressed: () {
+                    // Add forgot password functionality
+                  },
+                  child: Text(
+                    'Forgot Password?',
+                    style: TextStyle(
+                      color: Color(0xFF2E66D7),
+                      fontSize: 14.0,
                     ),
                   ),
                 ),
