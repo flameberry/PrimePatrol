@@ -133,7 +133,9 @@ class _HomePgState extends State<HomePg> {
       Queue queue = await channel.queue('notification_queue', durable: true);
 
       String jsonMessage = jsonEncode({
-        "fcm_token": fcmToken
+        "fcm_token": fcmToken,
+        "title": "Good JOB!!",
+        "content": "Someone just upvoted your post!"
       });
 
       queue.publish(jsonMessage);
