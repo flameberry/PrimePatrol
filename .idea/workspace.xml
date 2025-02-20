@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AndroidLayouts">
+    <shared>
+      <config />
+    </shared>
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ebe25d97-889f-46b3-8bfa-af2d9ed661a8" name="Changes" comment="">
+    <list default="true" id="ebe25d97-889f-46b3-8bfa-af2d9ed661a8" name="Changes" comment="rabbitmq-initial-setup">
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_Packages.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Dart_SDK.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/libraries/Flutter_Plugins.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/docker-compose.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/app.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/app.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/posts/dto/create-post.dto.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/posts/dto/create-post.dto.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/posts/entities/post.entity.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/posts/entities/post.entity.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.controller.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.controller.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.module.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.module.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.service.ts" beforeDir="false" afterPath="$PROJECT_DIR$/admin-dashboard-services/src/posts/posts.service.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/post_pg.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/post_pg.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugin_registrant.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/linux/flutter/generated_plugins.cmake" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/smartwater.iml" beforeDir="false" afterPath="$PROJECT_DIR$/smartwater.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pubspec.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugin_registrant.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/windows/flutter/generated_plugins.cmake" afterDir="false" />
@@ -30,10 +30,17 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
   <component name="ProjectId" id="2sllY0Uy8TNcxc3BMtL3dhrpH1g" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="" version="1" />
     <panes>
@@ -48,10 +55,16 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
+    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/soham/Desktop/SmartWater&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/91937/Documents/Smart_Water_Dataset/algae_growth_final/train/images/algae_0007_jpg.rf.e154e073a57946d5a8b260a8f03705b5.jpg&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;device.explorer&quot;,
     &quot;show.migrate.to.gradle.popup&quot;: &quot;false&quot;
   }
 }</component>
@@ -64,6 +77,15 @@
       <option name="presentableId" value="Default" />
       <updated>1739038089783</updated>
     </task>
+    <task id="LOCAL-00001" summary="rabbitmq-initial-setup">
+      <option name="closed" value="true" />
+      <created>1739178735526</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1739178735526</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -71,5 +93,52 @@
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
     </layout>
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="master" />
+                </option>
+              </RecentGroup>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="origin/master" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="master" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="rabbitmq-initial-setup" />
+    <option name="LAST_COMMIT_MESSAGE" value="rabbitmq-initial-setup" />
   </component>
 </project>
