@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smartwater/shop_pg.dart';
 import 'package:http/http.dart' as http;
+import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
 
 class Post {
@@ -10,6 +11,7 @@ class Post {
   final String imageUrl;
   final String? status;
   final DateTime createdAt;
+  final String userid;
   int upvotes;
   int downvotes;
 
@@ -19,6 +21,7 @@ class Post {
     required this.content,
     required this.imageUrl,
     this.status,
+    required this.userid,
     required this.createdAt,
     this.upvotes = 0,
     this.downvotes = 0,
@@ -36,6 +39,7 @@ class Post {
           : DateTime.now(),
       upvotes: json['upvotes'] ?? 0,
       downvotes: json['downvotes'] ?? 0,
+      userid: json['UserId'] ?? '',
     );
   }
 }
@@ -51,15 +55,15 @@ class _HomePgState extends State<HomePg> {
   bool isLoading = true;
   String? error;
   List<Post> posts = [];
-  final String apiUrl = "http://192.168.1.3:3000/posts";
+  final String apiUrl = "http://192.168.1.41:3000/posts";
+  final String userApiUrl = "http://192.168.1.41:3000/users";
 
   @override
   void initState() {
     super.initState();
     fetchPosts();
   }
-
-  Future<void> fetchPosts() async {
+      Future<void> fetchPosts() async {
     try {
       final response = await http.get(Uri.parse(apiUrl));
       if (response.statusCode == 200) {
@@ -80,11 +84,111 @@ class _HomePgState extends State<HomePg> {
     }
   }
 
-  void upvotePost(int index) {
+  Future<String?> getFCMToken(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$userApiUrl/$userId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> usersData = json.decode(response.body);
+        print('User Data Response: $usersData');
+
+        // Check if we got any users back
+        if (usersData.isNotEmpty) {
+          // Get the first user from the array
+          final userData = usersData[0];
+          // Return the FCM token
+          return userData['fcm_token'] as String?;
+        } else {
+          print('No user found with ID: $userId');
+          return null;
+        }
+      } else {
+        print('Failed to fetch FCM token: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error fetching FCM token: $e');
+      print(StackTrace.current);
+      return null;
+    }
+  }
+
+  Future<void> sendPushNotification({
+    required String fcmToken
+  }) async {
+    try {
+      final ConnectionSettings settings = ConnectionSettings(
+        host: '10.0.2.2',
+        // host: '192.168.1.41',
+        port: 5672,
+        authProvider: PlainAuthenticator('guest', 'guest'),
+      );
+
+      Client client = Client(settings: settings);
+      Channel channel = await client.channel();
+      Queue queue = await channel.queue('notification_queue', durable: true);
+
+      String jsonMessage = jsonEncode({
+        "fcm_token": fcmToken
+      });
+
+      queue.publish(jsonMessage);
+      print('✅ Notification request sent to queue successfully for token: $fcmToken');
+      client.close();
+    } catch (e) {
+      print('❌ Error sending notification request to RabbitMQ: $e');
+    }
+  }
+
+
+  // void upvotePost(int index) {
+  //   setState(() {
+  //     posts[index].upvotes++;
+  //
+  //   });
+  // }
+  Future<void> upvotePost(int index) async {
+    final post = posts[index];
+
     setState(() {
       posts[index].upvotes++;
     });
+
+    // Get FCM token for the post creator
+    final fcmToken = await getFCMToken(post.userid);
+
+    if (fcmToken != null) {
+      // Send notification through RabbitMQ
+      await sendPushNotification(
+        fcmToken: fcmToken
+      );
+    }
+
+    // try {
+    //   final response = await http.post(
+    //     Uri.parse('$apiUrl/${post.id}/upvote'),
+    //     headers: {'Content-Type': 'application/json'},
+    //   );
+    //
+    //   if (response.statusCode != 200) {
+    //     // If server update fails, revert the optimistic update
+    //     setState(() {
+    //       posts[index].upvotes--;
+    //     });
+    //   }
+    // } catch (e) {
+    //   // If there's an error, revert the optimistic update
+    //   setState(() {
+    //     posts[index].upvotes--;
+    //   });
+    //   print('Error updating upvote: $e');
+    // }
   }
+
 
   void downvotePost(int index) {
     setState(() {
