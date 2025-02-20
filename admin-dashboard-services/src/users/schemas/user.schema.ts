@@ -22,6 +22,16 @@ export class User {
 
   @Prop({ default: true })
   isActive: boolean;
+
+  @Prop({ required : true})
+  fcm_token: string;
+
+  @Prop()
+  latitude: int;
+
+  @Prop()
+  longitude: int;
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
