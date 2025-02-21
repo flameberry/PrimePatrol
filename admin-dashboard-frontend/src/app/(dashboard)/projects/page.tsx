@@ -1,4 +1,3 @@
-// ProjectsPage.tsx
 "use client";
 
 import Column from "@/components/projects/Column";
@@ -9,7 +8,7 @@ interface Incident {
     title: string;
     content: string;
     imageUrl?: string;
-    status?: 'active' | 'resolved';
+    status: "active" | "resolved" | "pending"; // Align with Column's expected type
     timestamp?: string;
 }
 
@@ -36,7 +35,6 @@ const ProjectsPage: React.FC = () => {
 
             const data = await response.json();
             console.log("The data is: ", data);
-            
             
             // Transform the data into our column structure
             const formattedData: Record<string, ColumnData> = {

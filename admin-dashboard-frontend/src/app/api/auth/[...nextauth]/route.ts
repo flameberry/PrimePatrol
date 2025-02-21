@@ -9,6 +9,12 @@ const users = [
     username: "soham",
     // password: "$2b$10$H.s7Bz.VB0Gr5XkzUz3W9eM0v5gMVrZeyF.2FmnK.l2SNz.KqO4yu" // bcrypt hashed password
     password: "untrained0"
+  },
+  {
+    id: "2",
+    username: "atharva",
+    // password: "$2b$10$H.s7Bz.VB0Gr5XkzUz3W9eM0v5gMVrZeyF.2FmnK.l2SNz.KqO4yu" // bcrypt hashed password
+    password: "untrained0"
   }
 ];
 

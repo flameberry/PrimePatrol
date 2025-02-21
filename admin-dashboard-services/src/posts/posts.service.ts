@@ -39,47 +39,55 @@ export class PostsService {
   async create(createPostDto: CreatePostDto, file: Express.Multer.File) {
     try {
       let imageUrl = null;
-
+  
       if (file) {
         // Generate unique filename
         const fileName = `${Date.now()}-${file.originalname}`;
-        
+  
         // Upload to S3
-        await this.s3Client.send(
-          new PutObjectCommand({
-            Bucket: 'smartwater-application',
-            Key: fileName,
-            Body: file.buffer,
-            ContentType: file.mimetype,
-          })
-        );
-
-        // Generate S3 URL
-        imageUrl = `https://smartwater-application.s3.${this.configService.get('AWS_S3_REGION')}.amazonaws.com/${fileName}`;
+        try {
+          await this.s3Client.send(
+            new PutObjectCommand({
+              Bucket: 'smartwater-application',
+              Key: fileName,
+              Body: file.buffer,
+              ContentType: file.mimetype,
+            })
+          );
+  
+          // Generate S3 URL
+          imageUrl = `https://smartwater-application.s3.${this.configService.get('AWS_S3_REGION')}.amazonaws.com/${fileName}`;
+        } catch (s3Error) {
+          // Log the S3 error!
+          console.error('S3 Upload Error:', s3Error);
+          throw new Error(`S3 Upload failed: ${s3Error.message}`); //Re-throw with more context
+        }
       }
-
+  
       // Create the post document with S3 URL
       const createdPost = new this.postModel({
         ...createPostDto,
         imageUrl: imageUrl, // Store the S3 URL instead of local file path
       });
-      
+  
       // Save the post
       const savedPost = await createdPost.save();
-      
+  
       // Update user's posts
       const updatedUser = await this.userModel.findByIdAndUpdate(
         createPostDto.userId,
         { $push: { postIds: savedPost._id } },
         { new: true }
       );
-
+  
       if (!updatedUser) {
         throw new NotFoundException(`User with ID ${createPostDto.userId} not found`);
       }
-
+  
       return savedPost;
     } catch (error) {
+      // Log the *original* error!
+      console.error('Post creation error:', error);
       throw error;
     }
   }

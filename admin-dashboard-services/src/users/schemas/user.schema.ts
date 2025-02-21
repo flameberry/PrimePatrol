@@ -23,15 +23,14 @@ export class User {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ required : true})
+  @Prop({ required: true })
   fcm_token: string;
 
   @Prop()
-  latitude: int;
+  latitude: number;
 
   @Prop()
-  longitude: int;
-
+  longitude: number;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

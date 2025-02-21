@@ -1,4 +1,5 @@
 // WorkerAssignmentModal.tsx
+import Image from "next/image";
 import React from "react";
 
 // Define the Worker type
@@ -28,7 +29,7 @@ const WorkerAssignmentModal: React.FC<WorkerAssignmentModalProps> = ({ isOpen, o
           {workers.map(worker => (
             <li key={worker.id} className="flex items-center justify-between p-2 border-b">
               <div className="flex items-center">
-                <img src={worker.avatar} alt={worker.name} className="w-8 h-8 rounded-full mr-2" />
+                <Image src={worker.avatar} alt={worker.name} className="w-8 h-8 rounded-full mr-2" />
                 <span>{worker.name}</span>
               </div>
               <button
