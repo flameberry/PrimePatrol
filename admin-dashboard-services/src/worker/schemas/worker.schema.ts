@@ -12,10 +12,13 @@ export class Worker {
   @Prop({ required: true, unique: true })
   employeeId: string;
 
+  @Prop({ required: true, default: 'inactive' }) // Set default status to 'inactive'
+  status: string;
+
   @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'WorkerActivity' }])
   activities: WorkerActivity[];
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Post' }])
+  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Post' }]) // Correctly uses Schema.Types.ObjectId
   assignedPosts: MongooseSchema.Types.ObjectId[];
 }
 

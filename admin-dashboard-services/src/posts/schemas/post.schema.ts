@@ -1,14 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Worker } from 'src/worker/schemas/worker.schema';
-import { Users } from 'src/users/schemas/user.schema'
 
 export type PostDocument = Post & Document;
 
 @Schema({ timestamps: true })
 export class Post {
   @Prop({ required: true })
-  PostId: string;
+  postId: string;
 
   @Prop({ required: true })
   title: string;
@@ -19,21 +18,20 @@ export class Post {
   @Prop()
   imageUrl: string;
 
-  @Prop()
+  @Prop({ default: 'pending' })
   status: string;
 
   @Prop()
   predictedLabel: string;
 
   @Prop()
-  predictedConfidence : float;
+  predictedConfidence: number;
 
-  @Prop()
-  upvote : int;
+  @Prop({ default: 0 })
+  upvote: number;
 
-  @Prop()
-  downvote : int;
-
+  @Prop({ default: 0 })
+  downvote: number;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Worker' }] })
   assignedWorkers: Worker[];
@@ -41,8 +39,14 @@ export class Post {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'WorkerActivity' }] })
   workerActivities: Types.ObjectId[];
 
-  @Prop({type: [{ type: Types.ObjectId, ref: 'Users' }]})
-  Userid : MongooseSchema.Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  userId: Types.ObjectId;
+
+  @Prop()
+  latitude: number;
+
+  @Prop()
+  longitude: number;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

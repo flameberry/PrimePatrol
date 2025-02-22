@@ -1,13 +1,17 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
+import 'package:uuid/uuid.dart';
 
 class PostPg extends StatefulWidget {
+  final String userId = "67b79c666bb869d943773a4f";
+
   const PostPg({Key? key}) : super(key: key);
 
   @override
@@ -16,13 +20,16 @@ class PostPg extends StatefulWidget {
 
 class _PostPgState extends State<PostPg> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   String selectedCategory = 'Select Category';
   String? _selectedLocation;
+  final TextEditingController _contentController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  int _currentStep = 1;
+  // API URL - Replace with your actual API URL
+  static const String API_URL = "http://192.168.1.3:3000";
 
   final List<String> _categories = [
     'Select Category',
@@ -104,10 +111,7 @@ class _PostPgState extends State<PostPg> {
       Queue queue = await channel.queue('token_queue', durable: true);
 
       // Create token payload
-      String jsonMessage = jsonEncode({
-        "userId": userId,
-        "fcmToken": token
-      });
+      String jsonMessage = jsonEncode({"userId": userId, "fcmToken": token});
 
       // Send token to queue
       queue.publish(jsonMessage);
@@ -118,7 +122,6 @@ class _PostPgState extends State<PostPg> {
     }
   }
 
-  // Function to pick an image
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -155,14 +158,13 @@ class _PostPgState extends State<PostPg> {
       Channel channel = await client.channel();
       Queue queue = await channel.queue('notification_queue', durable: true);
 
-      String jsonMessage = jsonEncode({
-        "user_token": _userId,
-        "fcm_token": _fcmToken
-      });
+      String jsonMessage =
+          jsonEncode({"user_token": _userId, "fcm_token": _fcmToken});
 
       // Send message
       queue.publish(jsonMessage);
-      print('✅ Notification request sent to queue successfully for token: $_fcmToken');
+      print(
+          '✅ Notification request sent to queue successfully for token: $_fcmToken');
       client.close();
     } catch (e) {
       print('❌ Error sending notification request to RabbitMQ: $e');
@@ -199,7 +201,6 @@ class _PostPgState extends State<PostPg> {
     }
   }
 
-
   // Function to handle map interaction (dummy for now)
   Future<void> _pickLocation() async {
     // Simulate a location being picked for demonstration
@@ -209,28 +210,161 @@ class _PostPgState extends State<PostPg> {
   }
 
   // Function to handle post submission
-  void _submitPost() {
-    if (_selectedImage != null) {
-      _sendImageToQueue(_selectedImage!);
-    }
-    _sendPushNotification();
-    // _sendPushNotification(
-    // 'Post Created',
-    // 'Your ${selectedCategory.toLowerCase()} post was successfully submitted!'
-    // );
+  Future<void> _submitPost() async {
+    print('Submit Post button pressed');
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Post submitted successfully!')),
-    );
+    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
+      print('Title or content is empty');
+      setState(() {
+        _errorMessage = 'Please fill in both title and content fields';
+      });
+      return;
+    }
 
     setState(() {
-      _selectedImage = null;
-      _titleController.clear();
-      _descriptionController.clear();
-      _selectedLocation = null;
-      selectedCategory = 'Select Category';
-      _currentStep = 1;
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      print('Creating multipart request');
+      final url = Uri.parse('$API_URL/posts');
+      var request = http.MultipartRequest('POST', url);
+
+      final String postId = Uuid().v4();
+      print('Generated Post ID: $postId');
+
+      int lattitude = -90 + Random().nextInt(180);
+      int longitude = -180 + Random().nextInt(360);
+
+      request.fields.addAll({
+        'postId': postId,
+        'title': _titleController.text,
+        'content': _contentController.text,
+        'userId': widget.userId,
+        'status': 'pending',
+        'latitude': '$lattitude',
+        'longitude': '$longitude'
+      });
+
+      print('Request fields: ${request.fields}');
+
+      if (_selectedImage != null) {
+        print('Adding image to request');
+        try {
+          var imageStream = http.ByteStream(_selectedImage!.openRead());
+          var length = await _selectedImage!.length();
+
+          print('Image path: ${_selectedImage!.path}');
+          print('Image size: $length bytes');
+
+          var multipartFile = http.MultipartFile('image', imageStream, length,
+              filename: _selectedImage!.path.split('/').last);
+          request.files.add(multipartFile);
+        } catch (e) {
+          print('Failed to process image: $e');
+          throw Exception('Failed to process image: $e');
+        }
+      }
+
+      print('Sending request to: $url');
+      var streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          print('Request timed out');
+          throw Exception('Request timed out');
+        },
+      );
+
+      // Get response
+      var response = await http.Response.fromStream(streamedResponse);
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
+      // Handle response
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Success
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Post created successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          // Reset form
+          setState(() {
+            _selectedImage = null;
+            _titleController.clear();
+            _contentController.clear();
+          });
+
+          // Update the user's postIds array
+          await _updateUserPostIds(postId);
+        }
+      } else {
+        // Handle error response
+        var errorMessage = 'Failed to create post';
+        try {
+          var jsonResponse = json.decode(response.body);
+          errorMessage = jsonResponse['message'] ?? errorMessage;
+        } catch (_) {
+          // If JSON parsing fails, use status code in error message
+          errorMessage = 'Server error: ${response.statusCode}';
+        }
+        throw Exception(errorMessage);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $_errorMessage'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+
+    if (_selectedImage != null) {
+      print('Sending image to queue');
+      _sendImageToQueue(_selectedImage!);
+    }
+
+    print('Sending push notification');
+    _sendPushNotification();
+  }
+
+// Function to update the user's postIds array
+  Future<void> _updateUserPostIds(String postId) async {
+    try {
+      final url = Uri.parse('$API_URL/users/${widget.userId}');
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'postIds': [
+            postId
+          ], // Append the new postId to the user's postIds array
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('✅ User postIds updated successfully');
+      } else {
+        print('❌ Failed to update user postIds: ${response.body}');
+        throw Exception('Failed to update user postIds');
+      }
+    } catch (e) {
+      print('❌ Error updating user postIds: $e');
+      throw Exception('Error updating user postIds: $e');
+    }
   }
 
   @override
@@ -244,136 +378,179 @@ class _PostPgState extends State<PostPg> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Image Upload Section
-            ElevatedButton(
-              onPressed: _pickImage,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E66D7),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Image Upload Section
+                ElevatedButton.icon(
+                  onPressed: _isLoading ? null : _pickImage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E66D7),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  icon: const Icon(Icons.upload, color: Colors.white),
+                  label: const Text(
+                    'Upload Image',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Upload Image',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_selectedImage != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.file(
-                  _selectedImage!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
+                if (_selectedImage != null) ...[
+                  Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          _selectedImage!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () {
+                          setState(() {
+                            _selectedImage = null;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                const SizedBox(height: 16),
 
-            // Title Field
-            TextFormField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Title',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                // Title Field
+                TextFormField(
+                  controller: _titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Title',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            // Description Field
-            TextFormField(
-              controller: _descriptionController,
-              decoration: InputDecoration(
-                labelText: 'Description',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                // Description Field
+                TextFormField(
+                  controller: _contentController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
+                  maxLines: 5,
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-              maxLines: 5,
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            // Category Dropdown
-            DropdownButtonFormField<String>(
-              value: selectedCategory,
-              decoration: InputDecoration(
-                labelText: 'Category',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+                // Category Dropdown
+                DropdownButtonFormField<String>(
+                  value: selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      selectedCategory = newValue!;
+                    });
+                  },
+                  items: _categories.map((String category) {
+                    return DropdownMenuItem<String>(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
                 ),
-                filled: true,
-                fillColor: Colors.grey[200],
-              ),
-              onChanged: (String? newValue) {
-                setState(() {
-                  selectedCategory = newValue!;
-                });
-              },
-              items: _categories.map((String category) {
-                return DropdownMenuItem<String>(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-            // Location Picker
-            ElevatedButton(
-              onPressed: _pickLocation,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E66D7),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                // Location Picker
+                ElevatedButton(
+                  onPressed: _pickLocation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E66D7),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    'Add Current Location',
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
-              ),
-              child: const Text(
-                'Add Current Location',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-            if (_selectedLocation != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'Location: $_selectedLocation',
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            const SizedBox(height: 16),
+                if (_selectedLocation != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Location: $_selectedLocation',
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                const SizedBox(height: 16),
 
-            // Submit Button
-            ElevatedButton(
-              onPressed: _submitPost,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E66D7),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                // Submit Button
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _submitPost,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2E66D7),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          'Submit Post',
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
-              ),
-              child: const Text(
-                'Submit Post',
-                style: TextStyle(color: Colors.white),
+              ],
+            ),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
   }
 }

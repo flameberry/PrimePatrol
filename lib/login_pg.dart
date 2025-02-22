@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:smartwater/forgot_pass.dart';
 import 'package:smartwater/nav_bar.dart';
 
 class LoginPg extends StatefulWidget {
@@ -41,11 +42,11 @@ class _LoginPgState extends State<LoginPg> {
 
   Future<void> _signInWithGoogle() async {
     try {
-      // Trigger Google Sign-In flow
+      // Trigger the Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return; // User canceled the sign-in
+      if (googleUser == null) return; // User canceled sign-in
 
-      // Obtain auth details from the request
+      // Obtain the Google authentication details
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
@@ -56,15 +57,18 @@ class _LoginPgState extends State<LoginPg> {
       );
 
       // Sign in to Firebase with the Google credential
-      await _auth.signInWithCredential(credential);
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
 
       // Navigate to home page after successful login
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => NavBar()),
       );
+    } on FirebaseAuthException catch (e) {
+      _showErrorDialog(e.message ?? 'Google Sign-In failed. Please try again.');
     } catch (e) {
-      _showErrorDialog('Google Sign-In failed. Please try again.');
+      _showErrorDialog('An unexpected error occurred. Please try again.');
     }
   }
 
@@ -310,7 +314,11 @@ class _LoginPgState extends State<LoginPg> {
                 // Forgot Password Link
                 TextButton(
                   onPressed: () {
-                    // Add forgot password functionality
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ForgotPasswordPage()),
+                    );
                   },
                   child: Text(
                     'Forgot Password?',

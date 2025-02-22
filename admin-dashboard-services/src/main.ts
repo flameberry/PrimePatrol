@@ -78,7 +78,6 @@ async function bootstrap() {
   await app.listen(PORT, () => {
     Logger.log(`🚀 Server is running on http://localhost:${PORT}`);
     Logger.log(`📄 Swagger Docs available at http://localhost:${PORT}/api`);
-    Logger.log(`🖼 Uploaded files accessible at http://localhost:${PORT}/uploads`);
   });
 }
 

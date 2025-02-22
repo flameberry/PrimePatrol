@@ -27,8 +27,8 @@ const NewsUpdate = () => {
   }, [updates]);
 
   return (
-    <div className="p-a bg-white rounded-2xl shadow-lg w-full max-w-lg mx-auto">
-      <div className="overflow-hidden h-72">
+    <div className="p-2 rounded-2xl shadow-lg w-full max-w-lg mx-auto">
+      <div className="overflow-hidden h-96">
         <AnimatePresence>
           {updates.map((update) => (
             <motion.div
