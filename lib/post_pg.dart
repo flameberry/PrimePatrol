@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dart_amqp/dart_amqp.dart';
@@ -233,12 +234,17 @@ class _PostPgState extends State<PostPg> {
       final String postId = Uuid().v4();
       print('Generated Post ID: $postId');
 
+      int lattitude = -90 + Random().nextInt(180);
+      int longitude = -180 + Random().nextInt(360);
+
       request.fields.addAll({
         'postId': postId,
         'title': _titleController.text,
         'content': _contentController.text,
         'userId': widget.userId,
         'status': 'pending',
+        'latitude': '$lattitude',
+        'longitude': '$longitude'
       });
 
       print('Request fields: ${request.fields}');

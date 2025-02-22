@@ -1,8 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:smartwater/shop_pg.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
+
+// const rabbitMqHost = '172.20.10.10'
+const rabbitMqHost = '192.168.0.3';
+const rabbitMqPort = 5672;
+const rabbitMqUser = 'guest';
+const rabbitMqPass = 'guest';
+const rabbitMqGeolocationQueueName = 'geolocation_queue';
 
 class Post {
   final String id;
@@ -14,6 +23,8 @@ class Post {
   final String userid;
   int upvotes;
   int downvotes;
+  double latitude;
+  double longitude;
 
   Post({
     required this.id,
@@ -25,6 +36,8 @@ class Post {
     required this.createdAt,
     this.upvotes = 0,
     this.downvotes = 0,
+    this.latitude = 0.0,
+    this.longitude = 0.0,
   });
 
   factory Post.fromJson(Map<String, dynamic> json) {
@@ -39,6 +52,8 @@ class Post {
           : DateTime.now(),
       upvotes: json['upvotes'] ?? 0,
       downvotes: json['downvotes'] ?? 0,
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       userid: json['UserId'] ?? '',
     );
   }
@@ -57,8 +72,8 @@ class _HomePgState extends State<HomePg> {
   List<Post> posts = [];
   Set<String> upvotedPosts = {}; // Track upvoted posts
   Set<String> downvotedPosts = {}; // Track downvoted posts
-  final String apiUrl = "http://192.168.1.3:3000/posts";
-  final String userApiUrl = "http://192.168.1.3:3000/users";
+  final String apiUrl = "http://192.168.0.3:3000/posts";
+  final String userApiUrl = "http://192.168.0.3:3000/users";
 
   @override
   void initState() {
@@ -68,11 +83,50 @@ class _HomePgState extends State<HomePg> {
 
   Future<void> fetchPosts() async {
     try {
+      // Step 1: Fetch all posts from the API
       final response = await http.get(Uri.parse(apiUrl));
+
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
+        List<Post> allPosts = data.map((item) => Post.fromJson(item)).toList();
+        List<Post> filteredPosts;
+
+        const bool filterByLocation = true;
+
+        if (filterByLocation) {
+          // TODO: Fetch user latitude and longitude dynamically
+          double userLatitude = 33.4; // Replace with actual location fetching
+          double userLongitude = 100.3; // Replace with actual location fetching
+
+          // Step 2: Prepare geolocation data
+          Map<String, dynamic> geolocationData = {
+            "radius_km": 10000.0, // Search radius from user location
+            "baselocation": {
+              "latitude": userLatitude.toDouble(),
+              "longitude": userLongitude.toDouble()
+            },
+            "geolocations": allPosts
+                .map((post) => {
+                      "postId": post.id,
+                      "latitude": post.latitude.toDouble(),
+                      "longitude": post.longitude.toDouble(),
+                    })
+                .toList()
+          };
+
+          // Step 3: Send to RabbitMQ with Direct Reply-to
+          List<String> validPostIds =
+              await sendToGeolocationQueue(geolocationData);
+
+          // Step 4: Filter posts based on received validPostIds
+          filteredPosts =
+              allPosts.where((post) => validPostIds.contains(post.id)).toList();
+        } else {
+          filteredPosts = allPosts;
+        }
+
         setState(() {
-          posts = data.map((item) => Post.fromJson(item)).toList();
+          posts = filteredPosts; // Use filtered posts
           isLoading = false;
           error = null;
         });
@@ -84,6 +138,61 @@ class _HomePgState extends State<HomePg> {
         isLoading = false;
         error = e.toString();
       });
+    }
+  }
+
+  Future<List<String>> sendToGeolocationQueue(
+      Map<String, dynamic> payload) async {
+    final List<String> validPostIds = [];
+    final completer = Completer<List<String>>();
+
+    try {
+      // Establish RabbitMQ connection
+      Client client = Client(
+          settings: ConnectionSettings(
+              host: rabbitMqHost,
+              port: rabbitMqPort,
+              authProvider: PlainAuthenticator(rabbitMqUser, rabbitMqPass)));
+
+      Channel channel = await client.channel();
+
+      // **Using Direct Reply-To queue**
+      String replyQueue = "amq.rabbitmq.reply-to";
+      String correlationId = DateTime.now().millisecondsSinceEpoch.toString();
+
+      Consumer consumer = await (await channel.queue(replyQueue)).consume();
+
+      consumer.listen((AmqpMessage message) {
+        if (message.properties?.corellationId == correlationId) {
+          try {
+            Map<String, dynamic> response = jsonDecode(message.payloadAsString);
+
+            // Ensure validPostIds are converted to integers
+            validPostIds.addAll((response["validPostIds"] as List<dynamic>)
+                .map((id) => id.toString()));
+
+            completer.complete(validPostIds);
+            client.close(); // Close connection after receiving response
+          } catch (e) {
+            completer.completeError("Failed to parse RabbitMQ response: $e");
+            print("❌ Message content: ${message.payloadAsString}");
+          }
+        }
+      });
+
+      // Publish message with Direct Reply-To
+      Queue queue =
+          await channel.queue(rabbitMqGeolocationQueueName, durable: true);
+      queue.publish(jsonEncode(payload),
+          properties: MessageProperties()
+            ..corellationId = correlationId
+            ..replyTo = replyQueue // **This is the correct way**
+          );
+
+      return completer.future;
+    } catch (e) {
+      print("❌ Error sending to RabbitMQ: $e");
+      return [];
     }
   }
 
@@ -123,17 +232,20 @@ class _HomePgState extends State<HomePg> {
   Future<void> sendPushNotification({required String fcmToken}) async {
     try {
       final ConnectionSettings settings = ConnectionSettings(
-        host: '10.0.2.2',
-        // host: '192.168.1.3',
-        port: 5672,
-        authProvider: PlainAuthenticator('guest', 'guest'),
+        host: rabbitMqHost,
+        port: rabbitMqPort,
+        authProvider: PlainAuthenticator(rabbitMqUser, rabbitMqPass),
       );
 
       Client client = Client(settings: settings);
       Channel channel = await client.channel();
       Queue queue = await channel.queue('notification_queue', durable: true);
 
-      String jsonMessage = jsonEncode({"fcm_token": fcmToken});
+      String jsonMessage = jsonEncode({
+        "fcm_token": fcmToken,
+        "title": "GoodJob",
+        "content": "Someone just upvoted your post!"
+      });
 
       queue.publish(jsonMessage);
       print(

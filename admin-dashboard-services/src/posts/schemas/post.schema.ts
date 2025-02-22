@@ -41,6 +41,12 @@ export class Post {
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
+
+  @Prop()
+  latitude: number;
+
+  @Prop()
+  longitude: number;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
