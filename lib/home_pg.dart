@@ -100,7 +100,7 @@ class _HomePgState extends State<HomePg> {
 
           // Step 2: Prepare geolocation data
           Map<String, dynamic> geolocationData = {
-            "radius_km": 10000.0, // Search radius from user location
+            "radius_km": 4200.0, // Search radius from user location
             "baselocation": {
               "latitude": userLatitude.toDouble(),
               "longitude": userLongitude.toDouble()
