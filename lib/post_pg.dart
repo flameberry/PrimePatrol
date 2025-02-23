@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 class PostPg extends StatefulWidget {
-  final String userId = "67b79c666bb869d943773a4f";
-
   const PostPg({Key? key}) : super(key: key);
 
   @override
@@ -29,7 +26,8 @@ class _PostPgState extends State<PostPg> {
   String? _errorMessage;
 
   // API URL - Replace with your actual API URL
-  static const String API_URL = "http://192.168.1.3:3000";
+  static const String API_URL = "http://192.168.1.38:3000";
+  static const String userApiUrl = "http://192.168.1.38:3000/users";
 
   final List<String> _categories = [
     'Select Category',
@@ -37,88 +35,51 @@ class _PostPgState extends State<PostPg> {
     'Flooding',
     'Industrial Waste'
   ];
-  String? _userId;
-  String? _fcmToken;
+  String? firebaseUid;
 
   @override
   void initState() {
     super.initState();
-    _initFirebaseMessaging();
-    _getUserId(); // Get current user ID when component mounts
+    // _initFirebaseMessaging();
+    _getFirebaseId(); // Get current user ID when component mounts
   }
 
-  Future<void> _getUserId() async {
+  Future<void> _getFirebaseId() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     setState(() {
-      _userId = currentUser?.uid;
+       firebaseUid = currentUser?.uid;
     });
-    print('Current user ID: $_userId');
+    print('Current user ID: $firebaseUid');
   }
 
-  Future<void> _initFirebaseMessaging() async {
-    // Request notification permissions
-    await FirebaseMessaging.instance.requestPermission();
+  Future<String?> getuserId(String firebaseUid) async {
+    if (firebaseUid.isEmpty) {
+      print('Invalid firebase UID');
+      return null;
+    }
 
-    // Get the token
-    _fcmToken = await FirebaseMessaging.instance.getToken();
-    print('FCM Token: $_fcmToken');
-
-    // Listen for token refreshes
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-      setState(() {
-        _fcmToken = newToken;
-      });
-      // if (_userId != null) {
-      //   _sendTokenToBackend(newToken, _userId!);
-      // }
-    });
-
-    // Send the initial token to backend (only if user is logged in)
-    // if (_fcmToken != null && _userId != null) {
-    //   _sendTokenToBackend(_fcmToken!, _userId!);
-    // }
-
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Got a message in the foreground!');
-      print('Message data: ${message.data}');
-
-      if (message.notification != null) {
-        print('Message notification: ${message.notification!.title}');
-        print('Message notification: ${message.notification!.body}');
-
-        // Show in-app notification (optional)
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message.notification!.body ?? 'New notification'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    });
-  }
-
-  Future<void> _sendTokenToBackend(String token, String userId) async {
     try {
-      final ConnectionSettings settings = ConnectionSettings(
-        host: '10.0.2.2',
-        port: 5672,
-        authProvider: PlainAuthenticator('guest', 'guest'),
+      final response = await http.get(
+        Uri.parse('$userApiUrl/firebase/$firebaseUid'),
+        headers: {'Content-Type': 'application/json'},
       );
 
-      Client client = Client(settings: settings);
-      Channel channel = await client.channel();
-      Queue queue = await channel.queue('token_queue', durable: true);
+      if (response.statusCode == 200) {
+        try {
+          final Map<String, dynamic> userData = json.decode(response.body);
+          print('User Data Response: $userData');
 
-      // Create token payload
-      String jsonMessage = jsonEncode({"userId": userId, "fcmToken": token});
+          return userData['_id'] as String?;
 
-      // Send token to queue
-      queue.publish(jsonMessage);
-      print('✅ FCM token sent to queue successfully for user: $userId');
-      client.close();
+        } catch (e) {
+          print('Error parsing JSON response: $e');
+        }
+      }
+      print('Failed to fetch userId: ${response.statusCode}');
+      return null;
     } catch (e) {
-      print('❌ Error sending FCM token to RabbitMQ: $e');
+      print('Error fetching UserId: $e');
+      return null;
     }
   }
 
@@ -131,50 +92,12 @@ class _PostPgState extends State<PostPg> {
     }
   }
 
-  Future<void> _sendPushNotification() async {
-    try {
-      // Make sure we have the user ID
-      if (_userId == null) {
-        User? currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser == null) {
-          print('❌ Cannot send notification: User not logged in');
-          return;
-        }
-        _userId = currentUser.uid;
-      }
 
-      if (_fcmToken == null) {
-        print('❌ Cannot send notification: FCM token not available');
-        return;
-      }
-
-      final ConnectionSettings settings = ConnectionSettings(
-        host: '10.0.2.2',
-        port: 5672,
-        authProvider: PlainAuthenticator('guest', 'guest'),
-      );
-
-      Client client = Client(settings: settings);
-      Channel channel = await client.channel();
-      Queue queue = await channel.queue('notification_queue', durable: true);
-
-      String jsonMessage =
-          jsonEncode({"user_token": _userId, "fcm_token": _fcmToken});
-
-      // Send message
-      queue.publish(jsonMessage);
-      print(
-          '✅ Notification request sent to queue successfully for token: $_fcmToken');
-      client.close();
-    } catch (e) {
-      print('❌ Error sending notification request to RabbitMQ: $e');
-    }
-  }
-
-  Future<void> _sendImageToQueue(File imageFile) async {
+  Future<void> _sendImageToQueue(File imageFile,String postId) async {
     try {
       final ConnectionSettings settings = ConnectionSettings(
         host: '10.0.2.2', // Emulator-to-host mapping for RabbitMQ
+        // host: '192.168.1.41',
         port: 5672,
         // authProvider: PlainAuthenticator('myuser', 'mypassword'),
         authProvider: PlainAuthenticator('guest', 'guest'),
@@ -189,7 +112,7 @@ class _PostPgState extends State<PostPg> {
       String base64Image = base64Encode(imageBytes);
 
       // Create JSON payload
-      String jsonMessage = jsonEncode({"image": base64Image});
+      String jsonMessage = jsonEncode({"image": base64Image,"postId": postId});
 
       // Send message
       queue.publish(jsonMessage);
@@ -212,6 +135,7 @@ class _PostPgState extends State<PostPg> {
   // Function to handle post submission
   Future<void> _submitPost() async {
     print('Submit Post button pressed');
+    final String postId = Uuid().v4();
 
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
       print('Title or content is empty');
@@ -230,8 +154,19 @@ class _PostPgState extends State<PostPg> {
       print('Creating multipart request');
       final url = Uri.parse('$API_URL/posts');
       var request = http.MultipartRequest('POST', url);
-
-      final String postId = Uuid().v4();
+      if (firebaseUid == null) {
+        setState(() {
+          _errorMessage = 'Firebase ID not available';
+        });
+        return;
+      }
+      final String? userId = await getuserId(firebaseUid!);
+      if (userId == null) {
+        setState(() {
+          _errorMessage = 'User ID could not be retrieved';
+        });
+        return;
+      }
       print('Generated Post ID: $postId');
 
       int lattitude = -90 + Random().nextInt(180);
@@ -241,7 +176,7 @@ class _PostPgState extends State<PostPg> {
         'postId': postId,
         'title': _titleController.text,
         'content': _contentController.text,
-        'userId': widget.userId,
+        'userId': userId,
         'status': 'pending',
         'latitude': '$lattitude',
         'longitude': '$longitude'
@@ -334,17 +269,24 @@ class _PostPgState extends State<PostPg> {
 
     if (_selectedImage != null) {
       print('Sending image to queue');
-      _sendImageToQueue(_selectedImage!);
+      _sendImageToQueue(_selectedImage!,postId);
     }
 
-    print('Sending push notification');
-    _sendPushNotification();
   }
 
 // Function to update the user's postIds array
   Future<void> _updateUserPostIds(String postId) async {
+    if (firebaseUid == null) {
+      print('❌ Cannot update postIds: Firebase UID is null');
+      return;
+    }
+    final String? userId = await getuserId(firebaseUid!);
+    if (userId == null) {
+      print('❌ Cannot update postIds: User ID could not be retrieved');
+      return;
+    }
     try {
-      final url = Uri.parse('$API_URL/users/${widget.userId}');
+      final url = Uri.parse('$API_URL/users/$userId');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},

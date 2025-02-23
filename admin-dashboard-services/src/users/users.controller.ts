@@ -117,6 +117,20 @@ export class UserController {
     return this.userService.findOne(id);
   }
 
+@Get('/firebase/:firebaseId')
+  @ApiOperation({ summary: 'Get a user by FirebaseId' })
+  @ApiParam({
+    name: 'firebaseId',
+    required: true,
+    description: 'The firebaseId of the user to retrieve',
+    type: String,
+  })
+  @ApiResponse({ status: 200, description: 'Returns the user by FirebaseId' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async findByFirebaseId(@Param('firebaseId') firebaseId: string) {
+    return this.userService.findByFirebaseId(firebaseId);
+  }
+
   @Put(':id')
   @ApiOperation({ summary: 'Update a user' })
   @ApiParam({
