@@ -3,6 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:smartwater/forgot_pass.dart';
 import 'package:smartwater/nav_bar.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LoginPg extends StatefulWidget {
   @override
@@ -15,30 +18,84 @@ class _LoginPgState extends State<LoginPg> {
   final _passwordController = TextEditingController();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+
+  static const String userApiUrl = "http://192.168.1.38:3000/users";
+
+  Future<String?> getFcmToken() async {
+    try {
+      // Request permission for notifications (required for iOS)
+      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // Get the token
+        String? token = await _firebaseMessaging.getToken();
+        print('FCM Token: $token');
+        return token;
+      } else {
+        print('User declined or has not accepted notification permissions');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting FCM token: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateFcmToken(String firebaseUid, String fcmToken) async {
+    try {
+      print("FCM token started");
+      final response = await http.put(
+        Uri.parse('$userApiUrl/update-fcm/$firebaseUid'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'fcm_token': fcmToken}),
+      );
+
+      if (response.statusCode == 200) {
+        print('FCM token updated successfully');
+      } else {
+        print('Failed to update FCM token: ${response.statusCode}');
+        print('Response body: ${response.body}');
+      }
+    } catch (e) {
+      print('Error updating FCM token: $e');
+    }
+  }
 
   Future<void> _login() async {
     try {
-      // Try to sign in with email and password
-      await _auth.signInWithEmailAndPassword(
-          email: _emailController.text, password: _passwordController.text);
-
-      // Navigate to home page after successful login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => NavBar()),
+      // Sign in with email and password
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
+
+      // Get FCM token after successful login
+      String? fcmToken = await getFcmToken();
+      if (fcmToken != null && userCredential.user != null) {
+        // Update FCM token in database
+        await updateFcmToken(userCredential.user!.uid, fcmToken);
+      }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => NavBar()),
+        );
+
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        // Show alert if the email is not found
         _showErrorDialog('Account does not exist. Please register.');
       } else if (e.code == 'wrong-password') {
-        // Show alert for incorrect password
         _showErrorDialog('Incorrect password. Please try again.');
       } else {
         _showErrorDialog(e.message ?? 'Login failed. Please try again.');
       }
     }
   }
+
 
   Future<void> _signInWithGoogle() async {
     try {
@@ -59,6 +116,13 @@ class _LoginPgState extends State<LoginPg> {
       // Sign in to Firebase with the Google credential
       final UserCredential userCredential =
           await _auth.signInWithCredential(credential);
+
+      String? fcmToken = await getFcmToken();
+      if (fcmToken != null && userCredential.user != null) {
+        // Update FCM token in database
+        await updateFcmToken(userCredential.user!.uid, fcmToken);
+      }
+
 
       // Navigate to home page after successful login
       Navigator.pushReplacement(

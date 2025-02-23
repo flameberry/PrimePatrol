@@ -164,6 +164,33 @@ export class UserController {
     return this.userService.update(id, updateUserDto);
   }
 
+@Put('update-fcm/:firebaseId')
+@ApiOperation({ summary: 'Update FCM token using FirebaseId' })
+@ApiParam({
+  name: 'firebaseId',
+  required: true,
+  description: 'The FirebaseId of the user',
+  type: String,
+})
+@ApiBody({
+  schema: {
+    type: 'object',
+    properties: {
+      fcm_token: { type: 'string', example: 'new-fcm-token-456' },
+    },
+    required: ['fcm_token'],
+  },
+})
+@ApiResponse({ status: 200, description: 'FCM token updated successfully' })
+@ApiResponse({ status: 404, description: 'User not found' })
+async updateFcmToken(
+  @Param('firebaseId') firebaseId: string,
+  @Body('fcm_token') fcm_token: string,
+) {
+  return this.userService.updateFcmToken(firebaseId, fcm_token);
+}
+
+
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a user' })
   @ApiParam({

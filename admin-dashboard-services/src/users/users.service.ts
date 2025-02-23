@@ -42,6 +42,17 @@ export class UsersService {
     return user;
   }
 
+  //update fcm_token based on FirebaseId
+  async updateFcmToken(firebaseId: string, fcm_token: string) {
+    const user = await this.userModel.findOne({ firebaseId });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    user.fcm_token = fcm_token;
+    await user.save();
+    return { message: 'FCM token updated successfully' };
+  }
+
   // Remove a user
   async remove(id: string) {
     const user = await this.userModel.findByIdAndDelete(id).exec();
