@@ -7,8 +7,8 @@ import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
 
 // const rabbitMqHost = '172.20.10.10'
-//const rabbitMqHost = '10.0.2.2
-const rabbitMqHost = '192.168.0.3';
+// const rabbitMqHost = '10.0.2.2';
+const rabbitMqHost = '192.168.1.38';
 const rabbitMqPort = 5672;
 const rabbitMqUser = 'guest';
 const rabbitMqPass = 'guest';
@@ -21,7 +21,7 @@ class Post {
   final String imageUrl;
   final String? status;
   final DateTime createdAt;
-  final String userid;
+  final String userId;
   int upvotes;
   int downvotes;
   double latitude;
@@ -33,7 +33,7 @@ class Post {
     required this.content,
     required this.imageUrl,
     this.status,
-    required this.userid,
+    required this.userId,
     required this.createdAt,
     this.upvotes = 0,
     this.downvotes = 0,
@@ -55,7 +55,7 @@ class Post {
       downvotes: json['downvotes'] ?? 0,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
-      userid: json['UserId'] ?? '',
+      userId: json['userId'] ?? '',
     );
   }
 }
@@ -73,8 +73,8 @@ class _HomePgState extends State<HomePg> {
   List<Post> posts = [];
   Set<String> upvotedPosts = {}; // Track upvoted posts
   Set<String> downvotedPosts = {}; // Track downvoted posts
-  final String apiUrl = "http://192.168.0.3:3000/posts";
-  final String userApiUrl = "http://192.168.0.3:3000/users";
+  final String apiUrl = "http://192.168.1.38:3000/posts";
+  final String userApiUrl = "http://192.168.1.38:3000/users";
 
   @override
   void initState() {
@@ -92,7 +92,7 @@ class _HomePgState extends State<HomePg> {
         List<Post> allPosts = data.map((item) => Post.fromJson(item)).toList();
         List<Post> filteredPosts;
 
-        const bool filterByLocation = true;
+        const bool filterByLocation = false;
 
         if (filterByLocation) {
           // TODO: Fetch user latitude and longitude dynamically
@@ -205,15 +205,12 @@ class _HomePgState extends State<HomePg> {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> usersData = json.decode(response.body);
+        final Map<String,dynamic> usersData = json.decode(response.body);
         print('User Data Response: $usersData');
 
         // Check if we got any users back
         if (usersData.isNotEmpty) {
-          // Get the first user from the array
-          final userData = usersData[0];
-          // Return the FCM token
-          return userData['fcm_token'] as String?;
+          return usersData['fcm_token'] as String?;
         } else {
           print('No user found with ID: $userId');
           return null;
@@ -257,8 +254,8 @@ class _HomePgState extends State<HomePg> {
   }
 
   Future<void> upvotePost(int index) async {
-    final post = posts[index];
     final postId = posts[index].id;
+    final puserId = posts[index].userId;
 
     setState(() {
       if (upvotedPosts.contains(postId)) {
@@ -278,7 +275,7 @@ class _HomePgState extends State<HomePg> {
     });
 
     // Get FCM token for the post creator
-    final fcmToken = await getFCMToken(post.userid);
+    final fcmToken = await getFCMToken(puserId);
 
     if (fcmToken != null) {
       // Send notification through RabbitMQ
