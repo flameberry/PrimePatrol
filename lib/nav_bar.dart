@@ -85,18 +85,21 @@ class _NavBarState extends State<NavBar> {
         shadowColor: Colors.blueAccent,
         elevation: 0,
       ),
-      body: PageView(
-        controller: pageController,
-        onPageChanged: (index) {
-          setState(() {
-            _tabIndex = index;
-          });
-        },
-        children: const [
-          PostPg(), // Post Page
-          HomePg(), // Home Page
-          ProfilePg(), // Profile Page
-        ],
+      body: Padding(
+        padding: const EdgeInsets.only(bottom: 0),
+        child: PageView(
+          controller: pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _tabIndex = index;
+            });
+          },
+          children: const [
+            PostPg(), // Post Page
+            HomePg(), // Home Page
+            ProfilePg(), // Profile Page
+          ],
+        ),
       ),
     );
   }

@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smartwater/login_pg.dart';
 
 class ProfilePg extends StatefulWidget {
   const ProfilePg({Key? key}) : super(key: key);
 
   @override
   _ProfilePgState createState() => _ProfilePgState();
+  void signUserOut(BuildContext context) {
+    FirebaseAuth.instance.signOut().then((_) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => LoginPg()),
+      );
+    });
+  }
 }
 
 class _ProfilePgState extends State<ProfilePg> {
@@ -12,9 +21,13 @@ class _ProfilePgState extends State<ProfilePg> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 20,
+        toolbarHeight: 50,
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey[50],
+        title: const Text(
+          'Your Profile',
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        ),
       ),
       backgroundColor: Colors.grey[50], // Light grey background
       body: SafeArea(
@@ -96,7 +109,7 @@ class _ProfilePgState extends State<ProfilePg> {
                       TextStyle(color: Colors.white), // Text color set to white
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[900], // Dark blue color
+                  backgroundColor: Color(0xFF2E66D7), // Dark blue color
                   padding: const EdgeInsets.symmetric(
                       vertical: 12.0, horizontal: 24.0),
                   shape: RoundedRectangleBorder(
@@ -110,7 +123,7 @@ class _ProfilePgState extends State<ProfilePg> {
               // Logout Button
               ElevatedButton.icon(
                 onPressed: () {
-                  // Add functionality for logout
+                  widget.signUserOut(context);
                 },
                 icon: const Icon(Icons.logout,
                     color: Colors.white), // Icon color set to white

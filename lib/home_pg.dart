@@ -205,7 +205,7 @@ class _HomePgState extends State<HomePg> {
       );
 
       if (response.statusCode == 200) {
-        final Map<String,dynamic> usersData = json.decode(response.body);
+        final Map<String, dynamic> usersData = json.decode(response.body);
         print('User Data Response: $usersData');
 
         // Check if we got any users back
@@ -246,7 +246,8 @@ class _HomePgState extends State<HomePg> {
       });
 
       queue.publish(jsonMessage);
-      print('✅ Notification request sent to queue successfully for token: $fcmToken');
+      print(
+          '✅ Notification request sent to queue successfully for token: $fcmToken');
       client.close();
     } catch (e) {
       print('❌ Error sending notification request to RabbitMQ: $e');
@@ -303,7 +304,6 @@ class _HomePgState extends State<HomePg> {
     // }
   }
 
-
   void downvotePost(int index) {
     final postId = posts[index].id;
 
@@ -330,7 +330,7 @@ class _HomePgState extends State<HomePg> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 50,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey[50],
         title: const Text(
           'Your Feed',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
@@ -345,7 +345,7 @@ class _HomePgState extends State<HomePg> {
           ),
         ],
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : error != null

@@ -47,7 +47,7 @@ class _PostPgState extends State<PostPg> {
   Future<void> _getFirebaseId() async {
     User? currentUser = FirebaseAuth.instance.currentUser;
     setState(() {
-       firebaseUid = currentUser?.uid;
+      firebaseUid = currentUser?.uid;
     });
     print('Current user ID: $firebaseUid');
   }
@@ -70,7 +70,6 @@ class _PostPgState extends State<PostPg> {
           print('User Data Response: $userData');
 
           return userData['_id'] as String?;
-
         } catch (e) {
           print('Error parsing JSON response: $e');
         }
@@ -92,8 +91,7 @@ class _PostPgState extends State<PostPg> {
     }
   }
 
-
-  Future<void> _sendImageToQueue(File imageFile,String postId) async {
+  Future<void> _sendImageToQueue(File imageFile, String postId) async {
     try {
       final ConnectionSettings settings = ConnectionSettings(
         host: '10.0.2.2', // Emulator-to-host mapping for RabbitMQ
@@ -112,7 +110,7 @@ class _PostPgState extends State<PostPg> {
       String base64Image = base64Encode(imageBytes);
 
       // Create JSON payload
-      String jsonMessage = jsonEncode({"image": base64Image,"postId": postId});
+      String jsonMessage = jsonEncode({"image": base64Image, "postId": postId});
 
       // Send message
       queue.publish(jsonMessage);
@@ -269,9 +267,8 @@ class _PostPgState extends State<PostPg> {
 
     if (_selectedImage != null) {
       print('Sending image to queue');
-      _sendImageToQueue(_selectedImage!,postId);
+      _sendImageToQueue(_selectedImage!, postId);
     }
-
   }
 
 // Function to update the user's postIds array
@@ -314,12 +311,13 @@ class _PostPgState extends State<PostPg> {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 50,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.grey[50],
         title: const Text(
           'Submit a Post',
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
+      backgroundColor: Colors.grey[50], // Light grey background
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -352,7 +350,7 @@ class _PostPgState extends State<PostPg> {
                         borderRadius: BorderRadius.circular(10),
                         child: Image.file(
                           _selectedImage!,
-                          height: 200,
+                          height: 500,
                           width: double.infinity,
                           fit: BoxFit.cover,
                         ),
@@ -474,6 +472,7 @@ class _PostPgState extends State<PostPg> {
                           style: TextStyle(color: Colors.white),
                         ),
                 ),
+                SizedBox(height: 90),
               ],
             ),
           ),
