@@ -45,6 +45,10 @@ dependencies:
   dart_amqp: ^0.3.1
   firebase_messaging: ^15.2.2
   uuid: ^4.4.2
+  geolocator: ^13.0.2
+  logger: ^2.0.0
+  flutter_dotenv: ^5.1.0
+
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +83,7 @@ flutter:
     - assets/garbage.png
     - assets/water_prob.png
     - assets/google_logo.png
+    - .env
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

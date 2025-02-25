@@ -21,8 +21,8 @@ import {
     ApiBody,
     ApiConsumes,
   } from '@nestjs/swagger';
-  import { AssignWorkersDto } from 'src/worker/dto/assign-workers.dto';
-  import { CreateWorkerActivityDto } from 'src/worker/dto/worker-activity.dto';
+  import { AssignWorkersDto } from '../worker/dto/assign-workers.dto';
+  import { CreateWorkerActivityDto } from '../worker/dto/worker-activity.dto';
   import { FileInterceptor } from '@nestjs/platform-express';
   import { Express } from 'express';
   import { memoryStorage } from 'multer';

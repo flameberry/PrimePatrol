@@ -6,6 +6,8 @@ import 'package:smartwater/nav_bar.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:logger/logger.dart'; // Added logger
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class LoginPg extends StatefulWidget {
   @override
@@ -20,12 +22,14 @@ class _LoginPgState extends State<LoginPg> {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  static const String userApiUrl = "http://192.168.1.38:3000/users";
+  final String userApiUrl =
+      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
 
   Future<String?> getFcmToken() async {
     try {
       // Request permission for notifications (required for iOS)
-      NotificationSettings settings = await _firebaseMessaging.requestPermission(
+      NotificationSettings settings =
+          await _firebaseMessaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
@@ -80,11 +84,10 @@ class _LoginPgState extends State<LoginPg> {
         // Update FCM token in database
         await updateFcmToken(userCredential.user!.uid, fcmToken);
       }
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => NavBar()),
-        );
-
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => NavBar()),
+      );
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
         _showErrorDialog('Account does not exist. Please register.');
@@ -95,7 +98,6 @@ class _LoginPgState extends State<LoginPg> {
       }
     }
   }
-
 
   Future<void> _signInWithGoogle() async {
     try {
@@ -122,7 +124,6 @@ class _LoginPgState extends State<LoginPg> {
         // Update FCM token in database
         await updateFcmToken(userCredential.user!.uid, fcmToken);
       }
-
 
       // Navigate to home page after successful login
       Navigator.pushReplacement(

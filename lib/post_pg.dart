@@ -7,6 +7,11 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
+import 'package:geolocator/geolocator.dart'; // Added geolocator
+import 'package:logger/logger.dart'; // Added logger
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+final Logger logger = Logger();
 
 class PostPg extends StatefulWidget {
   const PostPg({Key? key}) : super(key: key);
@@ -20,14 +25,14 @@ class _PostPgState extends State<PostPg> {
   final ImagePicker _picker = ImagePicker();
   File? _selectedImage;
   String selectedCategory = 'Select Category';
-  String? _selectedLocation;
+  Position? _currentPosition; // Store the current position
   final TextEditingController _contentController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
 
-  // API URL - Replace with your actual API URL
-  static const String API_URL = "http://192.168.1.38:3000";
-  static const String userApiUrl = "http://192.168.1.38:3000/users";
+  final String apiUrl = dotenv.env['API_URL'] ?? "http://192.168.1.7:3000";
+  final String userApiUrl =
+      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
 
   final List<String> _categories = [
     'Select Category',
@@ -40,7 +45,6 @@ class _PostPgState extends State<PostPg> {
   @override
   void initState() {
     super.initState();
-    // _initFirebaseMessaging();
     _getFirebaseId(); // Get current user ID when component mounts
   }
 
@@ -49,14 +53,16 @@ class _PostPgState extends State<PostPg> {
     setState(() {
       firebaseUid = currentUser?.uid;
     });
-    print('Current user ID: $firebaseUid');
+    logger.d('Current user ID: $firebaseUid'); // Replaced print with logger
   }
 
   Future<String?> getuserId(String firebaseUid) async {
     if (firebaseUid.isEmpty) {
-      print('Invalid firebase UID');
+      logger.e('Invalid firebase UID'); // Replaced print with logger
       return null;
     }
+
+    logger.d('firebase Id: $firebaseUid'); // Replaced print with logger
 
     try {
       final response = await http.get(
@@ -67,17 +73,20 @@ class _PostPgState extends State<PostPg> {
       if (response.statusCode == 200) {
         try {
           final Map<String, dynamic> userData = json.decode(response.body);
-          print('User Data Response: $userData');
+          logger
+              .d('User Data Response: $userData'); // Replaced print with logger
 
           return userData['_id'] as String?;
         } catch (e) {
-          print('Error parsing JSON response: $e');
+          logger.e(
+              'Error parsing JSON response: $e'); // Replaced print with logger
         }
       }
-      print('Failed to fetch userId: ${response.statusCode}');
+      logger.e(
+          'Failed to fetch userId: ${response.statusCode}'); // Replaced print with logger
       return null;
     } catch (e) {
-      print('Error fetching UserId: $e');
+      logger.e('Error fetching UserId: $e'); // Replaced print with logger
       return null;
     }
   }
@@ -94,10 +103,8 @@ class _PostPgState extends State<PostPg> {
   Future<void> _sendImageToQueue(File imageFile, String postId) async {
     try {
       final ConnectionSettings settings = ConnectionSettings(
-        host: '10.0.2.2', // Emulator-to-host mapping for RabbitMQ
-        // host: '192.168.1.41',
+        host: '192.168.1.7', // Emulator-to-host mapping for RabbitMQ
         port: 5672,
-        // authProvider: PlainAuthenticator('myuser', 'mypassword'),
         authProvider: PlainAuthenticator('guest', 'guest'),
       );
 
@@ -114,33 +121,77 @@ class _PostPgState extends State<PostPg> {
 
       // Send message
       queue.publish(jsonMessage);
-      print('✅ Image sent to queue successfully');
+      logger.d(
+          '✅ Image sent to queue successfully'); // Replaced print with logger
 
       client.close();
     } catch (e) {
-      print('❌ Error sending image to RabbitMQ: $e');
+      logger.e(
+          '❌ Error sending image to RabbitMQ: $e'); // Replaced print with logger
     }
   }
 
-  // Function to handle map interaction (dummy for now)
-  Future<void> _pickLocation() async {
-    // Simulate a location being picked for demonstration
+  // Function to get the current location
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Check if location services are enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        _errorMessage = 'Location services are disabled.';
+      });
+      return;
+    }
+
+    // Check location permissions
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          _errorMessage = 'Location permissions are denied';
+        });
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _errorMessage =
+            'Location permissions are permanently denied, we cannot request permissions.';
+      });
+      return;
+    }
+
+    // Get the current position
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
     setState(() {
-      _selectedLocation = '37.7749, -122.4194'; // Example location
+      _currentPosition = position;
     });
   }
 
   // Function to handle post submission
   Future<void> _submitPost() async {
-    print('Submit Post button pressed');
+    logger.d('Submit Post button pressed'); // Replaced print with logger
+
     final String postId = Uuid().v4();
 
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
-      print('Title or content is empty');
+      logger.e('Title or content is empty'); // Replaced print with logger
       setState(() {
         _errorMessage = 'Please fill in both title and content fields';
       });
       return;
+    }
+
+    if (_selectedImage != null) {
+      logger.d('Sending image to queue'); // Replaced print with logger
+      _sendImageToQueue(_selectedImage!, postId);
     }
 
     setState(() {
@@ -149,8 +200,8 @@ class _PostPgState extends State<PostPg> {
     });
 
     try {
-      print('Creating multipart request');
-      final url = Uri.parse('$API_URL/posts');
+      logger.d('Creating multipart request'); // Replaced print with logger
+      final url = Uri.parse('$apiUrl/posts');
       var request = http.MultipartRequest('POST', url);
       if (firebaseUid == null) {
         setState(() {
@@ -165,10 +216,7 @@ class _PostPgState extends State<PostPg> {
         });
         return;
       }
-      print('Generated Post ID: $postId');
-
-      int lattitude = -90 + Random().nextInt(180);
-      int longitude = -180 + Random().nextInt(360);
+      logger.d('Generated Post ID: $postId'); // Replaced print with logger
 
       request.fields.addAll({
         'postId': postId,
@@ -176,43 +224,46 @@ class _PostPgState extends State<PostPg> {
         'content': _contentController.text,
         'userId': userId,
         'status': 'pending',
-        'latitude': '$lattitude',
-        'longitude': '$longitude'
+        'latitude': _currentPosition!.latitude.toString(),
+        'longitude': _currentPosition!.longitude.toString(),
       });
 
-      print('Request fields: ${request.fields}');
+      logger
+          .d('Request fields: ${request.fields}'); // Replaced print with logger
 
       if (_selectedImage != null) {
-        print('Adding image to request');
+        logger.d('Adding image to request'); // Replaced print with logger
         try {
           var imageStream = http.ByteStream(_selectedImage!.openRead());
           var length = await _selectedImage!.length();
 
-          print('Image path: ${_selectedImage!.path}');
-          print('Image size: $length bytes');
+          logger.d(
+              'Image path: ${_selectedImage!.path}'); // Replaced print with logger
+          logger.d('Image size: $length bytes'); // Replaced print with logger
 
           var multipartFile = http.MultipartFile('image', imageStream, length,
               filename: _selectedImage!.path.split('/').last);
           request.files.add(multipartFile);
         } catch (e) {
-          print('Failed to process image: $e');
+          logger.e('Failed to process image: $e'); // Replaced print with logger
           throw Exception('Failed to process image: $e');
         }
       }
 
-      print('Sending request to: $url');
+      logger.d('Sending request to: $url'); // Replaced print with logger
       var streamedResponse = await request.send().timeout(
         const Duration(seconds: 30),
         onTimeout: () {
-          print('Request timed out');
+          logger.e('Request timed out'); // Replaced print with logger
           throw Exception('Request timed out');
         },
       );
 
       // Get response
       var response = await http.Response.fromStream(streamedResponse);
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      logger.d(
+          'Response status: ${response.statusCode}'); // Replaced print with logger
+      logger.d('Response body: ${response.body}'); // Replaced print with logger
 
       // Handle response
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -225,11 +276,17 @@ class _PostPgState extends State<PostPg> {
             ),
           );
 
+          if (_selectedImage != null) {
+            logger.d('Sending image to queue'); // Replaced print with logger
+            _sendImageToQueue(_selectedImage!, postId);
+          }
+
           // Reset form
           setState(() {
             _selectedImage = null;
             _titleController.clear();
             _contentController.clear();
+            _currentPosition = null;
           });
 
           // Update the user's postIds array
@@ -264,26 +321,23 @@ class _PostPgState extends State<PostPg> {
         setState(() => _isLoading = false);
       }
     }
-
-    if (_selectedImage != null) {
-      print('Sending image to queue');
-      _sendImageToQueue(_selectedImage!, postId);
-    }
   }
 
-// Function to update the user's postIds array
+  // Function to update the user's postIds array
   Future<void> _updateUserPostIds(String postId) async {
     if (firebaseUid == null) {
-      print('❌ Cannot update postIds: Firebase UID is null');
+      logger.e(
+          '❌ Cannot update postIds: Firebase UID is null'); // Replaced print with logger
       return;
     }
     final String? userId = await getuserId(firebaseUid!);
     if (userId == null) {
-      print('❌ Cannot update postIds: User ID could not be retrieved');
+      logger.e(
+          '❌ Cannot update postIds: User ID could not be retrieved'); // Replaced print with logger
       return;
     }
     try {
-      final url = Uri.parse('$API_URL/users/$userId');
+      final url = Uri.parse('$apiUrl/users/$userId');
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -295,13 +349,16 @@ class _PostPgState extends State<PostPg> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('✅ User postIds updated successfully');
+        logger.d(
+            '✅ User postIds updated successfully'); // Replaced print with logger
       } else {
-        print('❌ Failed to update user postIds: ${response.body}');
+        logger.e(
+            '❌ Failed to update user postIds: ${response.body}'); // Replaced print with logger
         throw Exception('Failed to update user postIds');
       }
     } catch (e) {
-      print('❌ Error updating user postIds: $e');
+      logger
+          .e('❌ Error updating user postIds: $e'); // Replaced print with logger
       throw Exception('Error updating user postIds: $e');
     }
   }
@@ -425,7 +482,7 @@ class _PostPgState extends State<PostPg> {
 
                 // Location Picker
                 ElevatedButton(
-                  onPressed: _pickLocation,
+                  onPressed: _isLoading ? null : _getCurrentLocation,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E66D7),
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -438,11 +495,11 @@ class _PostPgState extends State<PostPg> {
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
-                if (_selectedLocation != null)
+                if (_currentPosition != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
-                      'Location: $_selectedLocation',
+                      'Location: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}',
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),

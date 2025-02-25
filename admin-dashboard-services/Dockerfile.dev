@@ -1,16 +1,32 @@
-FROM node:23-alpine as development
+# Development Stage
+FROM node:23-alpine AS development
 
-# Working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy package.json package-lock.json 
-COPY package*.json ./
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# Copy the .env file into the container
+ENV AWS_ACCESS_KEY_ID=''
+ENV AWS_SECRET_ACCESS_KEY=''
+ENV AWS_S3_REGION=''
+
+ENV DATABASE_URL=''
+
+
 
 # Install dependencies
-RUN npm install
+RUN pnpm install
 
 # Copy the application code
 COPY . .
 
-# Start the application
-CMD [ "npm", "run", "start:dev" ]
+# Expose the application port
+EXPOSE 3000
+
+# Start the application in development mode
+CMD [ "pnpm", "run", "start:dev" ]

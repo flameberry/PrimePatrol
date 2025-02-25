@@ -1,2 +1,7 @@
 Dockerfile.prod
 Dockerfile.dev
+
+node_modules
+.git
+dist
+.env

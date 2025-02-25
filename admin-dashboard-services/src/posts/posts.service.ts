@@ -5,12 +5,12 @@ import { Post, PostDocument } from './schemas/post.schema';
 import { Worker, WorkerDocument } from '../worker/schemas/worker.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
-import { WorkerActivity, WorkerActivityDocument } from 'src/worker/schemas/worker.activity.schema';
-import { User } from 'src/users/schemas/user.schema';
+import { WorkerActivity, WorkerActivityDocument } from '../worker/schemas/worker.activity.schema';
+import { User } from '../users/schemas/user.schema';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { AssignWorkersDto } from 'src/worker/dto/assign-workers.dto';
-import { CreateWorkerActivityDto } from 'src/worker/dto/worker-activity.dto';
+import { AssignWorkersDto } from '../worker/dto/assign-workers.dto';
+import { CreateWorkerActivityDto } from '../worker/dto/worker-activity.dto';
 
 @Injectable()
 export class PostsService {
@@ -25,6 +25,10 @@ export class PostsService {
   ) {
     this.s3Client = new S3Client({
       region: this.configService.getOrThrow('AWS_S3_REGION'),
+      credentials: {
+        accessKeyId: this.configService.getOrThrow('AWS_ACCESS_KEY_ID'),
+        secretAccessKey: this.configService.getOrThrow('AWS_SECRET_ACCESS_KEY'),
+      }
     });
   }
 

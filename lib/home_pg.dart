@@ -5,10 +5,12 @@ import 'package:smartwater/shop_pg.dart';
 import 'package:http/http.dart' as http;
 import 'package:dart_amqp/dart_amqp.dart';
 import 'dart:convert';
+import 'package:logger/logger.dart'; // Added logger
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // const rabbitMqHost = '172.20.10.10'
-// const rabbitMqHost = '10.0.2.2';
-const rabbitMqHost = '192.168.1.38';
+const rabbitMqHost = '192.168.1.7';
 const rabbitMqPort = 5672;
 const rabbitMqUser = 'guest';
 const rabbitMqPass = 'guest';
@@ -73,38 +75,86 @@ class _HomePgState extends State<HomePg> {
   List<Post> posts = [];
   Set<String> upvotedPosts = {}; // Track upvoted posts
   Set<String> downvotedPosts = {}; // Track downvoted posts
-  final String apiUrl = "http://192.168.1.38:3000/posts";
-  final String userApiUrl = "http://192.168.1.38:3000/users";
+  double? userLatitude; // Store user's latitude
+  double? userLongitude; // Store user's longitude
+  final String postApiUrl =
+      dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3000/posts";
+  final String userApiUrl =
+      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
 
   @override
   void initState() {
     super.initState();
-    fetchPosts();
+    fetchUserLocation();
+  }
+
+  // Fetch the logged-in user's location
+  Future<void> fetchUserLocation() async {
+    try {
+      // Step 1: Get the current user's Firebase UID
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('No user logged in');
+      }
+      final String firebaseUid = user.uid;
+
+      // Step 2: Fetch user data from the API
+      final response = await http.get(
+        Uri.parse('$userApiUrl/firebase/$firebaseUid'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> userData = json.decode(response.body);
+        print('User Data: $userData');
+
+        // Step 3: Extract latitude and longitude
+        setState(() {
+          userLatitude = userData['latitude']?.toDouble();
+          userLongitude = userData['longitude']?.toDouble();
+        });
+
+        // Step 4: Fetch posts after getting the user's location
+        fetchPosts();
+      } else {
+        throw Exception('Failed to fetch user data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error fetching user location: $e');
+      setState(() {
+        isLoading = false;
+        error = 'Failed to fetch user location';
+      });
+    }
   }
 
   Future<void> fetchPosts() async {
     try {
-      // Step 1: Fetch all posts from the API
-      final response = await http.get(Uri.parse(apiUrl));
+      print('Fetching posts from API...');
 
+      // Step 1: Fetch all posts from the API
+      final response = await http.get(Uri.parse(postApiUrl));
+      print('Received response with status code: ${response.statusCode}');
+
+      List<Post> filteredPosts;
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         List<Post> allPosts = data.map((item) => Post.fromJson(item)).toList();
-        List<Post> filteredPosts;
+        print('Fetched ${allPosts.length} posts.');
 
-        const bool filterByLocation = false;
+        const bool filterByLocation = true;
 
         if (filterByLocation) {
-          // TODO: Fetch user latitude and longitude dynamically
-          double userLatitude = 33.4; // Replace with actual location fetching
-          double userLongitude = 100.3; // Replace with actual location fetching
+          print('Filtering posts by location...');
+          print(
+              'User Location: Latitude $userLatitude, Longitude $userLongitude');
 
           // Step 2: Prepare geolocation data
           Map<String, dynamic> geolocationData = {
             "radius_km": 4200.0, // Search radius from user location
             "baselocation": {
-              "latitude": userLatitude.toDouble(),
-              "longitude": userLongitude.toDouble()
+              "latitude": userLatitude,
+              "longitude": userLongitude,
             },
             "geolocations": allPosts
                 .map((post) => {
@@ -115,13 +165,23 @@ class _HomePgState extends State<HomePg> {
                 .toList()
           };
 
+          // Log the geolocation data being sent to RabbitMQ
+          print('Geolocation data being sent: $geolocationData');
+
           // Step 3: Send to RabbitMQ with Direct Reply-to
+          print('Sending geolocation data to RabbitMQ...');
           List<String> validPostIds =
               await sendToGeolocationQueue(geolocationData);
+
+          // Log valid post IDs received from RabbitMQ
+          print('Received valid post IDs: ${validPostIds.join(', ')}');
 
           // Step 4: Filter posts based on received validPostIds
           filteredPosts =
               allPosts.where((post) => validPostIds.contains(post.id)).toList();
+
+          // Log filtered posts count
+          print('Filtered down to ${filteredPosts.length} valid posts.');
         } else {
           filteredPosts = allPosts;
         }
@@ -131,10 +191,12 @@ class _HomePgState extends State<HomePg> {
           isLoading = false;
           error = null;
         });
+        print('Updated state with filtered posts.');
       } else {
         throw Exception('Failed to load posts');
       }
     } catch (e) {
+      print('Error occurred: $e');
       setState(() {
         isLoading = false;
         error = e.toString();
@@ -285,7 +347,7 @@ class _HomePgState extends State<HomePg> {
 
     // try {
     //   final response = await http.post(
-    //     Uri.parse('$apiUrl/${post.id}/upvote'),
+    //     Uri.parse('$postApiUrl/${post.id}/upvote'),
     //     headers: {'Content-Type': 'application/json'},
     //   );
     //

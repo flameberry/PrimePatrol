@@ -1,29 +1,51 @@
-FROM node:23-alpine as build
+# Stage 1: Build the application
+FROM node:23-alpine AS build
 
-# Working directory inside the container
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Set the working directory
 WORKDIR /app
 
-# Copy package.json package-lock.json 
-COPY package*.json ./
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
 
 # Install dependencies
-RUN npm install
+RUN pnpm install
 
 # Copy the application code
 COPY . .
 
 # Build the application
-RUN npm run build
+RUN pnpm run build
 
-# Production Stage
-FROM node:23-alpine as production
+# Stage 2: Production image
+FROM node:23-alpine AS production
 
-# Working directory inside the container
+# Copy the .env file into the container
+ENV AWS_ACCESS_KEY_ID=''
+ENV AWS_SECRET_ACCESS_KEY=''
+ENV AWS_S3_REGION=''
+
+ENV DATABASE_URL=''
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Set the working directory
 WORKDIR /app
 
+# Copy built files from the build stage
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-COPY package*.json ./
 
-# Start the application
-CMD [ "npm", "run", "start:prod" ]
+# Copy node_modules from the build stage
+COPY --from=build /app/node_modules ./node_modules
+
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# Expose the application port
+EXPOSE 3000
+
+# Start the application in production mode
+CMD [ "pnpm", "run", "start:prod" ]
