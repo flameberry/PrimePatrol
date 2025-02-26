@@ -78,9 +78,9 @@ class _HomePgState extends State<HomePg> {
   double? userLatitude; // Store user's latitude
   double? userLongitude; // Store user's longitude
   final String postApiUrl =
-      dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3000/posts";
+      dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3000/ap1/v1/posts";
   final String userApiUrl =
-      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
+      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/ap1/v1/users";
 
   @override
   void initState() {
