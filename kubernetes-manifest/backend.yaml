@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nestjs-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nestjs-backend
+  template:
+    metadata:
+      labels:
+        app: nestjs-backend
+    spec:
+      containers:
+      - name: nestjs-backend
+        image: untrainedtrash12/smartwater-api-dev:latest
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "AKIAQ3EGTG4QLH6NLGTS"  
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "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"
+        - name: AWS_S3_REGION
+          value: "us-east-1"
+        - name: DATABASE_URL
+          value: "mongodb+srv://2021atharvajadhav:AmaPiKn9KPwNtumg@cluster0.xck24.mongodb.net/SmartWater?retryWrites=true&w=majority&&ssl=true&appName=Cluster0"
+        ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nestjs-backend
+spec:
+  selector:
+    app: nestjs-backend
+  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      nodePort: 31675
