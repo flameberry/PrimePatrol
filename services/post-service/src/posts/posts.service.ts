@@ -141,14 +141,17 @@ export class PostsService {
     // Verify the post exists
     const post = await this.postModel.findById(postId);
     if (!post) throw new NotFoundException('Post not found');
-  
+
     // Fetch workers from the worker service API
     try {
-      const response = await axios.get(
-        'http://localhost:3001/api/v1/workers/findByIds',
-        { params: { ids: workerIds.join(',') } }, // Pass workerIds as query parameters
-      );
-  
+      const workerServiceHost = process.env.WORKER_SERVICE_HOST || 'localhost';
+      const workerServicePort = process.env.WORKER_SERVICE_PORT || 3001;
+      const workerServiceUrl = `http://${workerServiceHost}:${workerServicePort}/api/v1/workers/findByIds`;
+
+      const response = await axios.get(workerServiceUrl, {
+        params: { ids: workerIds.join(',') },
+      });
+
       if (!response.data || response.data.length !== workerIds.length) {
         throw new NotFoundException('Some workers not found');
       }
@@ -156,7 +159,7 @@ export class PostsService {
       console.error('Error fetching workers:', error.response?.data || error.message);
       throw new NotFoundException('Could not verify workers');
     }
-  
+
     // Update post with worker IDs
     const updatedPost = await this.postModel
       .findByIdAndUpdate(
@@ -165,9 +168,10 @@ export class PostsService {
         { new: true },
       )
       .populate('assignedWorkers');
-  
+
     return updatedPost;
   }
+
 
   async logWorkerActivity(
     postId: string,

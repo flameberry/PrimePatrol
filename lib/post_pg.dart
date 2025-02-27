@@ -31,6 +31,8 @@ class _PostPgState extends State<PostPg> {
   String? _errorMessage;
 
   final String apiUrl = dotenv.env['API_URL'] ?? "http://192.168.1.7:3000";
+  final String postApiUrl =
+      dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3002";
   final String userApiUrl =
       dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
 
@@ -201,7 +203,7 @@ class _PostPgState extends State<PostPg> {
 
     try {
       logger.d('Creating multipart request'); // Replaced print with logger
-      final url = Uri.parse('$apiUrl/posts');
+      final url = Uri.parse('$postApiUrl');
       var request = http.MultipartRequest('POST', url);
       if (firebaseUid == null) {
         setState(() {
@@ -347,6 +349,7 @@ class _PostPgState extends State<PostPg> {
           ], // Append the new postId to the user's postIds array
         }),
       );
+      logger.d('response: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         logger.d(

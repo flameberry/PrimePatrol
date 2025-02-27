@@ -50,7 +50,7 @@ export default function WorkerAssignmentTable() {
 
     const fetchPostDetails = async (postId: string): Promise<Post> => {
         try {
-            const response = await fetch(`http://localhost:3000/posts/${postId}`);
+            const response = await fetch(`http://localhost:3002/api/v1/posts/${postId}`);
             if (!response.ok) throw new Error('Failed to fetch post details');
             const data = await response.json();
             return data;
@@ -62,7 +62,7 @@ export default function WorkerAssignmentTable() {
 
     const fetchWorkers = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:3000/workers');
+            const response = await fetch('http://localhost:3001/api/v1/workers');
             if (!response.ok) throw new Error('Failed to fetch workers');
             const data = await response.json();
             setWorkers(data);

@@ -24,7 +24,7 @@ const ComplaintTracker: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("http://localhost:3000/posts"); // Replace with actual API URL
+        const response = await fetch("http://localhost:3002/api/v1/posts/"); // Replace with actual API URL
         const data: Complaint[] = await response.json();
 
         const monthNames = [

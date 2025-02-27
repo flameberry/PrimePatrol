@@ -38,7 +38,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onStatusChange })
     // Fetch all available workers for the modal
     const fetchAvailableWorkers = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:3000/workers');
+            const response = await fetch('http://localhost:3001/api/v1/workers');
             if (!response.ok) throw new Error('Failed to fetch workers');
             const workers = await response.json();
             setAvailableWorkers(workers);
@@ -57,7 +57,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onStatusChange })
         try {
             // Fetch workers by their IDs
             const workerIds = incident.assignedWorkers.join(',');
-            const response = await fetch(`http://localhost:3000/workers?ids=${workerIds}`);
+            const response = await fetch(`http://localhost:3001/api/v1/workers?ids=${workerIds}`);
             
             if (!response.ok) {
                 throw new Error('Failed to fetch assigned workers');
@@ -119,7 +119,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onStatusChange })
         setIsLoading(true);
         try {
           // Update the incident with the new list of assigned workers
-          const incidentResponse = await fetch(`http://localhost:3000/posts/${incident._id}`, {
+          const incidentResponse = await fetch(`http://localhost:3002/api/v1/posts/${incident._id}`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -136,7 +136,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onStatusChange })
       
           // Update each worker's assignedPosts array and set their status to "active"
           await Promise.all(selectedWorkers.map(async (workerId) => {
-            const updateWorkerResponse = await fetch(`http://localhost:3000/workers/${workerId}/assign-post`, {
+            const updateWorkerResponse = await fetch(`http://localhost:3001/api/v1/workers/${workerId}/assign-post`, {
               method: "PATCH",
               headers: {
                 "Content-Type": "application/json",

@@ -27,7 +27,7 @@ const ProjectsPage: React.FC = () => {
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch("http://localhost:3000/posts");
+            const response = await fetch("http://localhost:3002/api/v1/posts");
             
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

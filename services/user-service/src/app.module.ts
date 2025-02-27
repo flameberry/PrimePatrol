@@ -11,7 +11,7 @@ import { ConfigModule } from '@nestjs/config';
       isGlobal: true,
       // load: [configuration]
     }),
-    MongooseModule.forRoot('mongodb+srv://2021atharvajadhav:AmaPiKn9KPwNtumg@cluster0.xck24.mongodb.net/SmartWater?retryWrites=true&w=majority&&ssl=true&appName=Cluster0'),
+    MongooseModule.forRoot(process.env.DATABASE_URL),
     UsersModule,
 
   ],

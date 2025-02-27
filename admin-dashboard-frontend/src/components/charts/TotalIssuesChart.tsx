@@ -27,7 +27,7 @@ const TotalIssuesChart = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch("http://localhost:3000/posts");
+      const response = await fetch("http://localhost:3002/api/v1/posts/");
       const issues: Issue[] = await response.json();
       
       const dayCounts: Record<string, number> = { 

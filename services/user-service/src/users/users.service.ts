@@ -37,7 +37,9 @@ export class UsersService {
 
   // Update a user
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const user = await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true }).exec();
+    const user = await this.userModel
+      .findByIdAndUpdate(id, updateUserDto, { new: true })
+      .exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }

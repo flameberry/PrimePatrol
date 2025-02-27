@@ -16,6 +16,12 @@ async function bootstrap() {
   // // ✅ Start Microservices
   // await app.startAllMicroservices();
 
+  app.enableCors({
+    origin: '*', // Adjust this based on your frontend domain
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type, Authorization',
+  });
+
   // ✅ Swagger Configuration
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Post Service API')

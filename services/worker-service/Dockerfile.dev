@@ -1,0 +1,23 @@
+# Development Stage
+FROM node:23-alpine AS development
+
+# Set the working directory
+WORKDIR /app
+
+# Install pnpm globally
+RUN npm install -g pnpm
+
+# Copy package.json and pnpm-lock.yaml
+COPY package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install
+
+# Copy the application code
+COPY . .
+
+# Expose the application port
+EXPOSE 3000
+
+# Start the application in development mode
+CMD [ "pnpm", "run", "start:dev" ]
