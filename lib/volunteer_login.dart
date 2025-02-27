@@ -1,177 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:smartwater/forgot_pass.dart';
-import 'package:smartwater/nav_bar.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:logger/logger.dart'; // Added logger
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:smartwater/volunteer_login.dart';
+import 'package:smartwater/login_pg.dart';
+import 'package:smartwater/volunteer_home.dart';
 
-class LoginPg extends StatefulWidget {
+class VolunteerLoginPage extends StatefulWidget {
   @override
-  _LoginPgState createState() => _LoginPgState();
+  _VolunteerLoginPageState createState() => _VolunteerLoginPageState();
 }
 
-class _LoginPgState extends State<LoginPg> {
+class _VolunteerLoginPageState extends State<VolunteerLoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
-  final String userApiUrl =
-      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/users";
-
-  Future<String?> getFcmToken() async {
-    try {
-      // Request permission for notifications (required for iOS)
-      NotificationSettings settings =
-          await _firebaseMessaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        // Get the token
-        String? token = await _firebaseMessaging.getToken();
-        print('FCM Token: $token');
-        return token;
-      } else {
-        print('User declined or has not accepted notification permissions');
-        return null;
-      }
-    } catch (e) {
-      print('Error getting FCM token: $e');
-      return null;
+  void _loginAsVolunteer() {
+    if (_formKey.currentState!.validate()) {
+      // Implement volunteer login logic here
+      print("Logging in as Volunteer: ${_emailController.text}");
     }
-  }
-
-  Future<void> updateFcmToken(String firebaseUid, String fcmToken) async {
-    try {
-      print("FCM token started");
-      final response = await http.put(
-        Uri.parse('$userApiUrl/update-fcm/$firebaseUid'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'fcm_token': fcmToken}),
-      );
-
-      if (response.statusCode == 200) {
-        print('FCM token updated successfully');
-      } else {
-        print('Failed to update FCM token: ${response.statusCode}');
-        print('Response body: ${response.body}');
-      }
-    } catch (e) {
-      print('Error updating FCM token: $e');
-    }
-  }
-
-  Future<void> _login() async {
-    try {
-      // Sign in with email and password
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
-
-      // Get FCM token after successful login
-      String? fcmToken = await getFcmToken();
-      if (fcmToken != null && userCredential.user != null) {
-        // Update FCM token in database
-        await updateFcmToken(userCredential.user!.uid, fcmToken);
-      }
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => NavBar()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found') {
-        _showErrorDialog('Account does not exist. Please register.');
-      } else if (e.code == 'wrong-password') {
-        _showErrorDialog('Incorrect password. Please try again.');
-      } else {
-        _showErrorDialog(e.message ?? 'Login failed. Please try again.');
-      }
-    }
-  }
-
-  Future<void> _signInWithGoogle() async {
-    try {
-      // Trigger the Google Sign-In flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return; // User canceled sign-in
-
-      // Obtain the Google authentication details
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-
-      // Create a new credential
-      final OAuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase with the Google credential
-      final UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-
-      String? fcmToken = await getFcmToken();
-      if (fcmToken != null && userCredential.user != null) {
-        // Update FCM token in database
-        await updateFcmToken(userCredential.user!.uid, fcmToken);
-      }
-
-      // Navigate to home page after successful login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => NavBar()),
-      );
-    } on FirebaseAuthException catch (e) {
-      _showErrorDialog(e.message ?? 'Google Sign-In failed. Please try again.');
-    } catch (e) {
-      _showErrorDialog('An unexpected error occurred. Please try again.');
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          title: Text(
-            'Login Error',
-            style: TextStyle(
-              color: Colors.red[700],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            message,
-            style: TextStyle(color: Colors.grey[800]),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: Text(
-                'OK',
-                style: TextStyle(color: Color(0xFF2E66D7)),
-              ),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            )
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -186,7 +31,7 @@ class _LoginPgState extends State<LoginPg> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                SizedBox(height: 10),
+                SizedBox(height: 60),
                 // App logo
                 Container(
                   margin: EdgeInsets.only(bottom: 24.0),
@@ -197,7 +42,7 @@ class _LoginPgState extends State<LoginPg> {
                   ),
                 ),
                 Text(
-                  'Welcome Back!',
+                  'Volunteer Login',
                   style: TextStyle(
                     fontSize: 24.0,
                     fontWeight: FontWeight.bold,
@@ -206,7 +51,7 @@ class _LoginPgState extends State<LoginPg> {
                 ),
                 SizedBox(height: 8.0),
                 Text(
-                  'Sign in to continue',
+                  'Sign in to become a volunteer',
                   style: TextStyle(
                     fontSize: 16.0,
                     color: Colors.grey[600],
@@ -292,9 +137,11 @@ class _LoginPgState extends State<LoginPg> {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        _login();
-                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => VolunteerHome()),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFF2E66D7),
@@ -304,7 +151,7 @@ class _LoginPgState extends State<LoginPg> {
                       elevation: 5,
                     ),
                     child: Text(
-                      'Login',
+                      'Login as Volunteer',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18.0,
@@ -347,7 +194,9 @@ class _LoginPgState extends State<LoginPg> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _signInWithGoogle,
+                    onPressed: () {
+                      // Implement Google sign-in for volunteers here
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -377,34 +226,15 @@ class _LoginPgState extends State<LoginPg> {
                   ),
                 ),
                 SizedBox(height: 20.0),
-                // Forgot Password Link
                 TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(
-                          builder: (context) => ForgotPasswordPage()),
+                      MaterialPageRoute(builder: (context) => LoginPg()),
                     );
                   },
                   child: Text(
-                    'Forgot Password?',
-                    style: TextStyle(
-                      color: Color(0xFF2E66D7),
-                      fontSize: 14.0,
-                    ),
-                  ),
-                ),
-
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => VolunteerLoginPage()),
-                    );
-                  },
-                  child: Text(
-                    'Login as Volunteer',
+                    'Login as User',
                     style: TextStyle(
                       color: Color(0xFF2E66D7),
                       fontSize: 14.0,

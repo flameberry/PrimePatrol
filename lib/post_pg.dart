@@ -385,17 +385,16 @@ class _PostPgState extends State<PostPg> {
                 // Image Upload Section
                 ElevatedButton.icon(
                   onPressed: _isLoading ? null : _pickImage,
+                  icon: const Icon(Icons.upload, color: Color(0xFF2E66D7)),
+                  label: const Text('Upload Image',
+                      style: TextStyle(color: Color(0xFF2E66D7))),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E66D7),
+                    backgroundColor: Colors.grey[50],
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF2E66D7)),
                     ),
-                  ),
-                  icon: const Icon(Icons.upload, color: Colors.white),
-                  label: const Text(
-                    'Upload Image',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -481,18 +480,18 @@ class _PostPgState extends State<PostPg> {
                 const SizedBox(height: 16),
 
                 // Location Picker
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: _isLoading ? null : _getCurrentLocation,
+                  icon: const Icon(Icons.upload, color: Color(0xFF2E66D7)),
+                  label: const Text('Add Current Location',
+                      style: TextStyle(color: Color(0xFF2E66D7))),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E66D7),
+                    backgroundColor: Colors.grey[50],
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF2E66D7)),
                     ),
-                  ),
-                  child: const Text(
-                    'Add Current Location',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ),
                 if (_currentPosition != null)
