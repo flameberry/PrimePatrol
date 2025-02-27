@@ -97,6 +97,7 @@ class _HomePgState extends State<HomePg> {
         throw Exception('No user logged in');
       }
       final String firebaseUid = user.uid;
+      print("firebaseUid: ${firebaseUid}");
 
       // Step 2: Fetch user data from the API
       final response = await http.get(
