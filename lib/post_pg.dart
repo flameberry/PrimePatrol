@@ -30,7 +30,7 @@ class _PostPgState extends State<PostPg> {
   bool _isLoading = false;
   String? _errorMessage;
 
-  final String apiUrl = dotenv.env['API_URL'] ?? "http://192.168.1.7:3000";
+  // final String apiUrl = dotenv.env['API_URL'] ?? "http://192.168.1.7:3000";
   final String postApiUrl =
       dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3002";
   final String userApiUrl =
@@ -328,40 +328,63 @@ class _PostPgState extends State<PostPg> {
   // Function to update the user's postIds array
   Future<void> _updateUserPostIds(String postId) async {
     if (firebaseUid == null) {
-      logger.e(
-          '❌ Cannot update postIds: Firebase UID is null'); // Replaced print with logger
+      logger.e('❌ Cannot update postIds: Firebase UID is null');
       return;
     }
+
     final String? userId = await getuserId(firebaseUid!);
     if (userId == null) {
-      logger.e(
-          '❌ Cannot update postIds: User ID could not be retrieved'); // Replaced print with logger
+      logger.e('❌ Cannot update postIds: User ID could not be retrieved');
       return;
     }
+
     try {
-      final url = Uri.parse('$apiUrl/users/$userId');
+      // Log the URL we're trying to access for debugging
+      final url = Uri.parse('$userApiUrl/$userId');
+      logger.d('Updating user postIds at URL: $url');
+
+      // Get the current user data first to retrieve existing postIds
+      final getUserResponse = await http.get(url);
+
+      if (getUserResponse.statusCode != 200) {
+        logger.e(
+            '❌ Failed to get user data: ${getUserResponse.statusCode} - ${getUserResponse.body}');
+        throw Exception('Failed to get user data');
+      }
+
+      // Parse the current user data
+      final userData = json.decode(getUserResponse.body);
+
+      // Get existing postIds or create an empty list if none exist
+      List<String> existingPostIds = [];
+      if (userData['postIds'] != null) {
+        existingPostIds = List<String>.from(userData['postIds']);
+      }
+
+      // Add the new postId if it doesn't already exist
+      if (!existingPostIds.contains(postId)) {
+        existingPostIds.add(postId);
+      }
+
+      // Now update the user with the combined list
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'postIds': [
-            postId
-          ], // Append the new postId to the user's postIds array
+          'postIds': existingPostIds,
         }),
       );
-      logger.d('response: ${response.statusCode}');
+
+      logger.d('Update response: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        logger.d(
-            '✅ User postIds updated successfully'); // Replaced print with logger
+        logger.d('✅ User postIds updated successfully');
       } else {
-        logger.e(
-            '❌ Failed to update user postIds: ${response.body}'); // Replaced print with logger
+        logger.e('❌ Failed to update user postIds: ${response.body}');
         throw Exception('Failed to update user postIds');
       }
     } catch (e) {
-      logger
-          .e('❌ Error updating user postIds: $e'); // Replaced print with logger
+      logger.e('❌ Error updating user postIds: $e');
       throw Exception('Error updating user postIds: $e');
     }
   }
@@ -388,17 +411,16 @@ class _PostPgState extends State<PostPg> {
                 // Image Upload Section
                 ElevatedButton.icon(
                   onPressed: _isLoading ? null : _pickImage,
+                  icon: const Icon(Icons.upload, color: Color(0xFF2E66D7)),
+                  label: const Text('Upload Image',
+                      style: TextStyle(color: Color(0xFF2E66D7))),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E66D7),
+                    backgroundColor: Colors.grey[50],
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF2E66D7)),
                     ),
-                  ),
-                  icon: const Icon(Icons.upload, color: Colors.white),
-                  label: const Text(
-                    'Upload Image',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -484,18 +506,18 @@ class _PostPgState extends State<PostPg> {
                 const SizedBox(height: 16),
 
                 // Location Picker
-                ElevatedButton(
+                ElevatedButton.icon(
                   onPressed: _isLoading ? null : _getCurrentLocation,
+                  icon: const Icon(Icons.upload, color: Color(0xFF2E66D7)),
+                  label: const Text('Add Current Location',
+                      style: TextStyle(color: Color(0xFF2E66D7))),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E66D7),
+                    backgroundColor: Colors.grey[50],
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF2E66D7)),
                     ),
-                  ),
-                  child: const Text(
-                    'Add Current Location',
-                    style: TextStyle(color: Colors.white),
                   ),
                 ),
                 if (_currentPosition != null)

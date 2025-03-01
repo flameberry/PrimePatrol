@@ -18,4 +18,5 @@ export class WorkerActivity {
   description: string;
 }
 
-export const WorkerActivitySchema = SchemaFactory.createForClass(WorkerActivity);
+export const WorkerActivitySchema =
+  SchemaFactory.createForClass(WorkerActivity);

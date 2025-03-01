@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:4.0-management  # Use a valid RabbitMQ image
+        ports:
+        - containerPort: 5672  # Messaging Port
+        - containerPort: 15672 # Management UI Port
+        - containerPort: 15692  # Prometheus Port
+        env:
+        - name: RABBITMQ_PROMETHEUS
+          value: "true"
+        - name: RABBITMQ_DEFAULT_USER
+          value: "myuser"
+        - name: RABBITMQ_DEFAULT_PASS
+          value: "mypassword"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  type: NodePort
+  ports:
+    - name: amqp  # Naming the AMQP port
+      protocol: TCP
+      port: 5672
+      targetPort: 5672
+      nodePort: 31672
+    - name: management  # Naming the management UI port
+      protocol: TCP
+      port: 15672
+      targetPort: 15672
+      nodePort: 31673
+    - name: prometheus  # Naming the Prometheus port
+      protocol: TCP
+      port: 15692
+      targetPort: 15692
+      nodePort: 31674  # Changed to avoid conflict

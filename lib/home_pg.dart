@@ -10,7 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // const rabbitMqHost = '172.20.10.10'
-const rabbitMqHost = '192.168.1.7';
+final String rabbitMqHost = dotenv.env['RABBIT_MQ_HOST'] ?? '172.30.128.1';
 const rabbitMqPort = 5672;
 const rabbitMqUser = 'guest';
 const rabbitMqPass = 'guest';
@@ -78,9 +78,9 @@ class _HomePgState extends State<HomePg> {
   double? userLatitude; // Store user's latitude
   double? userLongitude; // Store user's longitude
   final String postApiUrl =
-      dotenv.env['POST_API_URL'] ?? "http://192.168.1.7:3000/ap1/v1/posts";
+      dotenv.env['POST_API_URL'] ?? "http://172.30.128.1:3002/ap1/v1/posts";
   final String userApiUrl =
-      dotenv.env['USER_API_URL'] ?? "http://192.168.1.7:3000/ap1/v1/users";
+      dotenv.env['USER_API_URL'] ?? "http://172.30.128.1:3000/ap1/v1/users";
 
   @override
   void initState() {
@@ -91,30 +91,30 @@ class _HomePgState extends State<HomePg> {
   // Fetch the logged-in user's location
   Future<void> fetchUserLocation() async {
     try {
-      // Step 1: Get the current user's Firebase UID
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('No user logged in');
       }
       final String firebaseUid = user.uid;
+      print("firebaseUid: ${firebaseUid}");
 
-      // Step 2: Fetch user data from the API
       final response = await http.get(
         Uri.parse('$userApiUrl/firebase/$firebaseUid'),
         headers: {'Content-Type': 'application/json'},
       );
 
+      print('Response status code: ${response.statusCode}'); // Debug statement
+      print('Response body: ${response.body}'); // Debug statement
+
       if (response.statusCode == 200) {
         final Map<String, dynamic> userData = json.decode(response.body);
         print('User Data: $userData');
 
-        // Step 3: Extract latitude and longitude
         setState(() {
           userLatitude = userData['latitude']?.toDouble();
           userLongitude = userData['longitude']?.toDouble();
         });
 
-        // Step 4: Fetch posts after getting the user's location
         fetchPosts();
       } else {
         throw Exception('Failed to fetch user data: ${response.statusCode}');

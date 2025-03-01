@@ -30,6 +30,7 @@ export class UsersService {
 
   // Get a user by FirebaseId
   async findByFirebaseId(firebaseId: string) {
+    console.log(`Searching for user with firebaseId: ${firebaseId}`); // Debug statement
     const user = await this.userModel.findOne({ firebaseId }).exec();
     if (!user) throw new NotFoundException('User not found');
     return user;

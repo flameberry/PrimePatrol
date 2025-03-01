@@ -1,6 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { WorkerActivity } from './worker.activity.schema';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type WorkerDocument = Worker & Document;
 
@@ -12,14 +11,14 @@ export class Worker {
   @Prop({ required: true, unique: true })
   employeeId: string;
 
-  @Prop({ required: true, default: 'inactive' }) // Set default status to 'inactive'
+  @Prop({ required: true, default: 'inactive' })
   status: string;
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'WorkerActivity' }])
-  activities: WorkerActivity[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'WorkerActivity' }] })
+  activities: Types.ObjectId[];
 
-  @Prop([{ type: MongooseSchema.Types.ObjectId, ref: 'Post' }]) // Correctly uses Schema.Types.ObjectId
-  assignedPosts: MongooseSchema.Types.ObjectId[];
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Post' }] })
+  assignedPosts: Types.ObjectId[];
 }
 
 export const WorkerSchema = SchemaFactory.createForClass(Worker);

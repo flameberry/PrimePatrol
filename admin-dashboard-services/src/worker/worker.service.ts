@@ -93,6 +93,13 @@ export class WorkerService {
     return updatedWorker;
   }
 
+  // In your activities controller or service
+// async getActivitiesForPost(postId: string) {
+//   return this.activityModel.find({ post: postId })
+//     .populate('worker', 'name employeeId')  // This populates worker details
+//     .exec();
+// }
+
   async remove(id: string): Promise<{ message: string }> {
     const result = await this.workerModel.findByIdAndDelete(id).exec();
 

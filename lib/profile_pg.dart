@@ -7,18 +7,17 @@ class ProfilePg extends StatefulWidget {
 
   @override
   _ProfilePgState createState() => _ProfilePgState();
-  void signUserOut(BuildContext context) {
-    FirebaseAuth.instance.signOut().then((_) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => LoginPg()),
-      );
-    });
-  }
 }
 
 class _ProfilePgState extends State<ProfilePg> {
+  final User? user = FirebaseAuth.instance.currentUser; // Get current user
+
   @override
   Widget build(BuildContext context) {
+    String userEmail = user?.email ?? 'No Email';
+    String userName = user?.displayName ?? 'User';
+    String? photoUrl = user?.photoURL; // Get profile picture URL
+
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 50,
@@ -40,17 +39,27 @@ class _ProfilePgState extends State<ProfilePg> {
               Center(
                 child: CircleAvatar(
                   radius: 60,
-                  backgroundImage: AssetImage(
-                      'assets/profile_pic.jpeg'), // Replace with your asset path
                   backgroundColor: Colors.grey[200],
+                  backgroundImage: photoUrl != null
+                      ? NetworkImage(photoUrl)
+                      : null, // Load profile image if available
+                  child: photoUrl == null
+                      ? Text(
+                          userName.isNotEmpty
+                              ? userName[0].toUpperCase()
+                              : '?', // Show initial if no photo
+                          style: const TextStyle(
+                              fontSize: 40, fontWeight: FontWeight.bold),
+                        )
+                      : null,
                 ),
               ),
               const SizedBox(height: 16.0),
 
               // User Name
-              const Text(
-                'Soham Kelaskar',
-                style: TextStyle(
+              Text(
+                userName,
+                style: const TextStyle(
                   fontSize: 24.0,
                   fontWeight: FontWeight.bold,
                 ),
@@ -58,10 +67,10 @@ class _ProfilePgState extends State<ProfilePg> {
 
               const SizedBox(height: 8.0),
 
-              // User Email or Info
-              const Text(
-                'soham03@gmail.com',
-                style: TextStyle(
+              // User Email
+              Text(
+                userEmail,
+                style: const TextStyle(
                   fontSize: 16.0,
                   color: Colors.grey,
                 ),
@@ -86,8 +95,7 @@ class _ProfilePgState extends State<ProfilePg> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Add any additional profile information here
-                    _buildProfileDetail('Phone', '+91 91568 54149'),
+                    _buildProfileDetail('Phone', user?.phoneNumber ?? 'N/A'),
                     const Divider(),
                     _buildProfileDetail('Address', 'Thane, Maharashtra'),
                   ],
@@ -101,15 +109,11 @@ class _ProfilePgState extends State<ProfilePg> {
                 onPressed: () {
                   // Add functionality for editing profile
                 },
-                icon: const Icon(Icons.edit,
-                    color: Colors.white), // Icon color set to white
-                label: const Text(
-                  'Edit Profile',
-                  style:
-                      TextStyle(color: Colors.white), // Text color set to white
-                ),
+                icon: const Icon(Icons.edit, color: Colors.white),
+                label: const Text('Edit Profile',
+                    style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF2E66D7), // Dark blue color
+                  backgroundColor: const Color(0xFF2E66D7), // Dark blue color
                   padding: const EdgeInsets.symmetric(
                       vertical: 12.0, horizontal: 24.0),
                   shape: RoundedRectangleBorder(
@@ -123,17 +127,17 @@ class _ProfilePgState extends State<ProfilePg> {
               // Logout Button
               ElevatedButton.icon(
                 onPressed: () {
-                  widget.signUserOut(context);
+                  FirebaseAuth.instance.signOut().then((_) {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => LoginPg()),
+                    );
+                  });
                 },
-                icon: const Icon(Icons.logout,
-                    color: Colors.white), // Icon color set to white
-                label: const Text(
-                  'Logout',
-                  style:
-                      TextStyle(color: Colors.white), // Text color set to white
-                ),
+                icon: const Icon(Icons.logout, color: Colors.white),
+                label:
+                    const Text('Logout', style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red, // Red color for logout
+                  backgroundColor: Colors.red,
                   padding: const EdgeInsets.symmetric(
                       vertical: 12.0, horizontal: 24.0),
                   shape: RoundedRectangleBorder(

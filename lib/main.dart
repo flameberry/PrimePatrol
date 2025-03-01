@@ -8,7 +8,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env"); // Make sure the filename is correct
+    print("Environment variables loaded successfully");
+  } catch (e) {
+    print("Failed to load .env file: $e");
+  }
   runApp(const MyApp());
 }
 

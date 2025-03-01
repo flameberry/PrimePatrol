@@ -1,6 +1,13 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  BadRequestException,
+  ServiceUnavailableException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './schemas/post.schema';
 import { Worker, WorkerDocument } from './schemas/worker.schema';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -15,7 +22,6 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { AssignWorkersDto } from './dto/assign-workers.dto';
 import { CreateWorkerActivityDto } from './dto/worker-activity.dto';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import axios from 'axios';
 
 @Injectable()
@@ -89,22 +95,28 @@ export class PostsService {
       // Save the post
       const savedPost = await createdPost.save();
 
-      // Use microservice client to update user's posts
+      // Use HTTP call to update user's posts instead of microservice
       try {
-        const userUpdated = await firstValueFrom(
-          this.userServiceClient.send(
-            { cmd: 'update-user-posts' },
-            { userId: createPostDto.userId, postId: savedPost._id },
-          ),
-        );
+        const userServiceHost = process.env.USER_SERVICE_HOST || 'localhost';
+        const userServicePort = process.env.USER_SERVICE_PORT || 3000;
+        const userServiceUrl = `http://${userServiceHost}:${userServicePort}/api/v1/users/${createPostDto.userId}`;
 
-        if (!userUpdated) {
-          throw new NotFoundException(
-            `User with ID ${createPostDto.userId} not found`,
+        // Make PUT request to update user's postIds array
+        const response = await axios.put(userServiceUrl, {
+          postIds: [savedPost._id.toString()], // Add the new post ID to user's posts
+        });
+
+        if (response.status !== 200 && response.status !== 201) {
+          console.warn(
+            `User update response: ${response.status}`,
+            response.data,
           );
         }
       } catch (error) {
-        console.error('User service communication error:', error);
+        console.error(
+          'User service communication error:',
+          error.response?.data || error.message,
+        );
         // Still return the post even if user service communication fails
       }
 
@@ -156,7 +168,10 @@ export class PostsService {
         throw new NotFoundException('Some workers not found');
       }
     } catch (error) {
-      console.error('Error fetching workers:', error.response?.data || error.message);
+      console.error(
+        'Error fetching workers:',
+        error.response?.data || error.message,
+      );
       throw new NotFoundException('Could not verify workers');
     }
 
@@ -172,64 +187,121 @@ export class PostsService {
     return updatedPost;
   }
 
-
   async logWorkerActivity(
     postId: string,
     activityDto: CreateWorkerActivityDto,
   ) {
-    // Verify post exists
-    const post = await this.postModel.findById(postId);
-    if (!post) throw new NotFoundException('Post not found');
-
-    // Verify worker through worker service
     try {
-      const workerExists = await firstValueFrom(
-        this.workerServiceClient.send(
-          { cmd: 'verify-worker' },
-          { workerId: activityDto.workerId },
-        ),
+      // Log operation start for debugging
+      console.log(
+        `[logWorkerActivity] Starting to log activity for post ${postId} by worker ${activityDto.workerId}`,
       );
 
-      if (!workerExists) {
-        throw new NotFoundException('Worker not found');
+      // Validate postId format
+      if (!this.isValidObjectId(postId)) {
+        console.error(`[logWorkerActivity] Invalid post ID format: ${postId}`);
+        throw new BadRequestException('Invalid post ID format');
       }
-    } catch (error) {
-      console.error('Worker service communication error:', error);
-      throw new NotFoundException('Could not verify worker');
-    }
 
-    // Create and save the activity
-    const activity = new this.workerActivityModel({
-      post: postId,
-      worker: activityDto.workerId,
-      action: activityDto.action,
-      description: activityDto.description,
-    });
+      // Validate workerId format
+      if (!this.isValidObjectId(activityDto.workerId)) {
+        console.error(
+          `[logWorkerActivity] Invalid worker ID format: ${activityDto.workerId}`,
+        );
+        throw new BadRequestException('Invalid worker ID format');
+      }
 
-    const savedActivity = await activity.save();
+      // Verify post exists
+      const post = await this.postModel.findById(postId);
+      if (!post) {
+        console.error(`[logWorkerActivity] Post not found with ID: ${postId}`);
+        throw new NotFoundException(`Post with ID ${postId} not found`);
+      }
 
-    // Update post with activity reference
-    await this.postModel.findByIdAndUpdate(postId, {
-      $push: { workerActivities: savedActivity._id },
-    });
+      // Verify worker exists
+      const worker = await this.workerModel.findById(activityDto.workerId);
+      if (!worker) {
+        console.error(
+          `[logWorkerActivity] Worker not found with ID: ${activityDto.workerId}`,
+        );
+        throw new NotFoundException(
+          `Worker with ID ${activityDto.workerId} not found`,
+        );
+      }
 
-    // Notify worker service about the activity
-    try {
-      await firstValueFrom(
-        this.workerServiceClient.send(
-          { cmd: 'log-worker-activity' },
-          {
-            workerId: activityDto.workerId,
-            activityId: savedActivity._id,
-          },
-        ),
+      // Create and save the activity with validation
+      const activity = new this.workerActivityModel({
+        post: postId,
+        worker: activityDto.workerId,
+        action: activityDto.action,
+        description: activityDto.description || '', // Handle optional description
+        timestamp: new Date(), // Add explicit timestamp
+      });
+
+      // Validate activity before saving
+      try {
+        await activity.validate();
+      } catch (validationError) {
+        console.error(
+          '[logWorkerActivity] Activity validation error:',
+          validationError,
+        );
+        throw new BadRequestException(
+          'Invalid activity data: ' + validationError.message,
+        );
+      }
+
+      // Save the activity and explicitly type it as WorkerActivityDocument
+      const savedActivity: WorkerActivityDocument = await activity.save();
+      console.log(
+        `[logWorkerActivity] Activity saved with ID: ${savedActivity._id}`,
       );
-    } catch (error) {
-      console.error('Worker service notification error:', error);
-      // Continue even if worker service notification fails
-    }
 
-    return savedActivity;
+      // Update worker's activities array
+      worker.activities.push(savedActivity._id as Types.ObjectId);
+      await worker.save();
+
+      // Populate the worker's activities and return the updated worker
+      const updatedWorker = await this.workerModel
+        .findById(activityDto.workerId)
+        .populate('activities') // Populate the activities
+        .exec();
+
+      if (!updatedWorker) {
+        console.error(
+          `[logWorkerActivity] Worker not found after update: ${activityDto.workerId}`,
+        );
+        throw new NotFoundException(
+          `Worker with ID ${activityDto.workerId} not found`,
+        );
+      }
+
+      console.log(
+        `[logWorkerActivity] Worker updated successfully:`,
+        updatedWorker,
+      );
+      return updatedWorker;
+    } catch (error) {
+      // Centralized error handling
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ServiceUnavailableException
+      ) {
+        console.error(`[logWorkerActivity] Known error: ${error.message}`);
+        throw error; // Re-throw known exceptions
+      }
+
+      console.error('[logWorkerActivity] Unexpected error:', error);
+      throw new InternalServerErrorException(
+        'Failed to log worker activity: unexpected error',
+      );
+    }
+  }
+
+  // Helper method to validate ObjectId format
+  private isValidObjectId(id: string): boolean {
+    return /^[0-9a-fA-F]{24}$/.test(id);
   }
 
   async getWorkerActivities(postId: string) {
@@ -259,34 +331,38 @@ export class PostsService {
 
   async remove(id: string) {
     const post = await this.postModel.findByIdAndDelete(id);
-    if (!post) throw new NotFoundException();
+    if (!post) throw new NotFoundException('Post not found');
 
     // Delete associated activities
     await this.workerActivityModel.deleteMany({ post: id });
 
-    // Notify worker service about post removal
+    // Notify worker service about post removal via HTTP
     try {
-      await firstValueFrom(
-        this.workerServiceClient.send(
-          { cmd: 'remove-post-assignment' },
-          { postId: id },
-        ),
-      );
+      const workerServiceHost = process.env.WORKER_SERVICE_HOST || 'localhost';
+      const workerServicePort = process.env.WORKER_SERVICE_PORT || 3001;
+      const workerServiceUrl = `http://${workerServiceHost}:${workerServicePort}/api/v1/workers/remove-post-assignment`;
+
+      await axios.post(workerServiceUrl, { postId: id });
     } catch (error) {
-      console.error('Worker service notification error:', error);
+      console.error(
+        'Worker service notification error:',
+        error.response?.data || error.message,
+      );
       // Continue even if worker service notification fails
     }
 
-    // Notify user service about post removal
+    // Notify user service about post removal via HTTP
     try {
-      await firstValueFrom(
-        this.userServiceClient.send(
-          { cmd: 'remove-post-from-users' },
-          { postId: id },
-        ),
-      );
+      const userServiceHost = process.env.USER_SERVICE_HOST || 'localhost';
+      const userServicePort = process.env.USER_SERVICE_PORT || 3000;
+      const userServiceUrl = `http://${userServiceHost}:${userServicePort}/api/v1/users/remove-post/${id}`;
+
+      await axios.post(userServiceUrl, { postId: id });
     } catch (error) {
-      console.error('User service notification error:', error);
+      console.error(
+        'User service notification error:',
+        error.response?.data || error.message,
+      );
       // Continue even if user service notification fails
     }
 
